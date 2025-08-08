@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
-import { PlaceDto } from './place.dto';
+import { PlaceDto } from '../../place/dto/place.dto';
 
 export enum TicketType {
   TRAIN = 'train',

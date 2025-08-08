@@ -7,8 +7,8 @@ import {
   IsOptional,
   ValidateNested,
 } from 'class-validator';
-import { FlightTicketDto } from './flight-ticket.dto';
-import { TrainTicketDto } from './train-ticket.dto';
+import { FlightTicketDto } from '../../ticket/dto/flight-ticket.dto';
+import { TrainTicketDto } from '../../ticket/dto/train-ticket.dto';
 
 export enum RenderType {
   JSON = 'json',

@@ -7,8 +7,8 @@ import {
   IsNumber,
   Min,
 } from 'class-validator';
-import { PlaceDto } from './place.dto';
-import { TicketType } from './ticket-base.dto';
+import { PlaceDto } from '../../place/dto/place.dto';
+import { TicketType } from '../../ticket/dto/ticket-base.dto';
 
 export class ItineraryItemDto {
   @ApiProperty({
