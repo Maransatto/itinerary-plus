@@ -1,0 +1,531 @@
+openapi: 3.1.0
+info:
+  title: Itinerary Plus API
+  version: 1.0.0
+  description: |
+    API for sorting travel tickets into a complete itinerary and rendering a human-readable version.
+
+    Contract-first design to enable parallel development and mocking. No authentication in v1.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Itineraries
+    description: Create and retrieve itineraries
+
+paths:
+  /v1/itineraries:
+    post:
+      tags: [Itineraries]
+      summary: Create and sort an itinerary from unsorted tickets
+      description: |
+        Accepts a set of unsorted tickets, sorts them into a single uninterrupted itinerary,
+        and returns the created itinerary with an identifier.
+
+        Set the `render` field to `human` or `both` to request a human-readable output.
+      operationId: createItinerary
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional idempotency key to safely retry POST requests.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItineraryRequest'
+            examples:
+              createItineraryRequest:
+                summary: Example request with multiple ticket types
+                value:
+                  tickets:
+                    - type: train
+                      from: { name: 'St. Anton am Arlberg Bahnhof' }
+                      to: { name: 'Innsbruck Hbf' }
+                      number: RJX 765
+                      platform: '3'
+                      seat: 17C
+                    - type: tram
+                      from: { name: 'Innsbruck Hbf' }
+                      to: { name: 'Innsbruck Airport' }
+                      line: S5
+                    - type: flight
+                      from: { name: 'Innsbruck Airport', code: INN }
+                      to: { name: 'Venice Airport', code: VCE }
+                      flightNumber: AA904
+                      gate: '10'
+                      seat: 18B
+                      baggage: self-check-in
+                  render: both
+      responses:
+        '201':
+          description: Itinerary created and sorted successfully
+          headers:
+            Location:
+              description: URL of the created itinerary resource
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+              examples:
+                createdItinerary:
+                  summary: Example itinerary JSON
+                  value:
+                    id: 5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b
+                    start: { name: 'St. Anton am Arlberg Bahnhof' }
+                    end: { name: 'Venice Airport', code: VCE }
+                    items:
+                      - index: 0
+                        type: train
+                        from: { name: 'St. Anton am Arlberg Bahnhof' }
+                        to: { name: 'Innsbruck Hbf' }
+                        number: RJX 765
+                        platform: '3'
+                        seat: 17C
+                      - index: 1
+                        type: tram
+                        from: { name: 'Innsbruck Hbf' }
+                        to: { name: 'Innsbruck Airport' }
+                        line: S5
+                      - index: 2
+                        type: flight
+                        from: { name: 'Innsbruck Airport', code: INN }
+                        to: { name: 'Venice Airport', code: VCE }
+                        flightNumber: AA904
+                        gate: '10'
+                        seat: 18B
+                        baggage: self-check-in
+                    stepsHuman:
+                      - '0. Start.'
+                      - '1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.'
+                      - '2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.'
+                      - '3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.'
+                      - '4. Last destination reached.'
+                    createdAt: 2025-08-08T10:00:00Z
+            text/plain:
+              schema:
+                type: string
+                description: Human-readable itinerary as plain text (one step per line)
+              examples:
+                humanText:
+                  summary: Example human-readable steps
+                  value: |-
+                    0. Start.
+                    1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.
+                    2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
+                    3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.
+                    4. Last destination reached.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/itineraries/{id}:
+    get:
+      tags: [Itineraries]
+      summary: Retrieve an itinerary by id
+      description: |
+        Returns the itinerary in JSON. Set `Accept: text/plain` to receive the human-readable version.
+      operationId: getItinerary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Accept
+          in: header
+          required: false
+          description: Set to `text/plain` to receive a human-readable itinerary as plain text.
+          schema:
+            type: string
+            enum: [application/json, text/plain]
+      responses:
+        '200':
+          description: Itinerary found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+              examples:
+                itinerary:
+                  $ref: '#/components/examples/CreatedItineraryExample'
+            text/plain:
+              schema:
+                type: string
+              examples:
+                humanText:
+                  $ref: '#/components/examples/HumanReadableExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/itineraries/{id}/human:
+    get:
+      tags: [Itineraries]
+      summary: Retrieve an itinerary in human-readable form
+      description: Convenience endpoint for plain text rendering of an itinerary
+      operationId: getItineraryHuman
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Human-readable itinerary
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                humanText:
+                  $ref: '#/components/examples/HumanReadableExample'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Place:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Display name of the place (station, airport, etc.)
+          minLength: 1
+        code:
+          type: string
+          description: Optional code (e.g., IATA, station code)
+    TicketBase:
+      type: object
+      required: [type, from, to]
+      properties:
+        id:
+          type: string
+          description: Optional client-side identifier for correlation
+        type:
+          type: string
+          description: Type discriminator for the ticket
+          enum: [train, tram, bus, boat, flight, taxi]
+        from:
+          $ref: '#/components/schemas/Place'
+        to:
+          $ref: '#/components/schemas/Place'
+        seat:
+          type: string
+          nullable: true
+          description: Seat number, if assigned
+        notes:
+          type: string
+          description: Free-form notes
+        meta:
+          type: object
+          additionalProperties: true
+          description: Extensible metadata container
+    Ticket:
+      oneOf:
+        - $ref: '#/components/schemas/TrainTicket'
+        - $ref: '#/components/schemas/TramTicket'
+        - $ref: '#/components/schemas/BusTicket'
+        - $ref: '#/components/schemas/BoatTicket'
+        - $ref: '#/components/schemas/FlightTicket'
+        - $ref: '#/components/schemas/TaxiTicket'
+      discriminator:
+        propertyName: type
+        mapping:
+          train: '#/components/schemas/TrainTicket'
+          tram: '#/components/schemas/TramTicket'
+          bus: '#/components/schemas/BusTicket'
+          boat: '#/components/schemas/BoatTicket'
+          flight: '#/components/schemas/FlightTicket'
+          taxi: '#/components/schemas/TaxiTicket'
+
+    TrainTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [train]
+            line:
+              type: string
+              description: Train line designation
+            number:
+              type: string
+              description: Train number (e.g., RJX 765)
+            platform:
+              type: string
+              description: Platform number or name
+
+    TramTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [tram]
+            line:
+              type: string
+              description: Tram line identifier
+
+    BusTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [bus]
+            service:
+              type: string
+              description: Bus service name or number
+
+    BoatTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [boat]
+            vessel:
+              type: string
+              description: Vessel name or identifier
+
+    FlightTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          required: [flightNumber]
+          properties:
+            type:
+              type: string
+              enum: [flight]
+            airline:
+              type: string
+            flightNumber:
+              type: string
+            gate:
+              type: string
+            baggage:
+              type: string
+              description: Baggage handling information
+              enum: [auto-transfer, self-check-in, counter]
+
+    TaxiTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [taxi]
+            provider:
+              type: string
+              description: Taxi provider or app
+
+    CreateItineraryRequest:
+      type: object
+      required: [tickets]
+      properties:
+        tickets:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Ticket'
+        render:
+          type: string
+          description: Controls whether a human-readable output is included
+          enum: [json, human, both]
+          default: json
+
+    ItineraryItem:
+      allOf:
+        - $ref: '#/components/schemas/Ticket'
+        - type: object
+          required: [index]
+          properties:
+            index:
+              type: integer
+              minimum: 0
+              description: Zero-based order of the ticket in the itinerary
+
+    Itinerary:
+      type: object
+      required: [id, items, start, end, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItineraryItem'
+        start:
+          $ref: '#/components/schemas/Place'
+        end:
+          $ref: '#/components/schemas/Place'
+        stepsHuman:
+          type: array
+          description: Optional human-readable steps; included when `render` is `human` or `both`
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [status, code, message]
+      properties:
+        status:
+          type: integer
+          format: int32
+        code:
+          type: string
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        details:
+          type: object
+          additionalProperties: true
+        correlationId:
+          type: string
+
+  responses:
+    BadRequest:
+      description: The request was invalid (validation or malformed input)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validationError:
+              value:
+                status: 400
+                code: BAD_REQUEST
+                message:
+                  - 'tickets should not be empty'
+                correlationId: req_01J8000001
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFound:
+              value:
+                status: 404
+                code: NOT_FOUND
+                message: Itinerary not found
+                correlationId: req_01J8000002
+    Conflict:
+      description: The request conflicts with the current state (e.g., idempotency key reuse with different payload)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            conflict:
+              value:
+                status: 409
+                code: CONFLICT
+                message: Idempotency key already used with a different payload
+                correlationId: req_01J8000003
+    UnprocessableEntity:
+      description: Business rule violation (e.g., tickets do not form a single uninterrupted path)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            disconnected:
+              value:
+                status: 422
+                code: DISCONNECTED_ITINERARY
+                message: Tickets do not form a single uninterrupted path.
+                details:
+                  breakAt: Innsbruck Airport
+                correlationId: req_01J8000004
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            serverError:
+              value:
+                status: 500
+                code: INTERNAL_SERVER_ERROR
+                message: Something went wrong
+                correlationId: req_01J8000005
+
+  examples:
+    CreatedItineraryExample:
+      summary: Example itinerary JSON
+      value:
+        id: 5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b
+        start: { name: 'St. Anton am Arlberg Bahnhof' }
+        end: { name: 'Venice Airport', code: VCE }
+        items:
+          - index: 0
+            type: train
+            from: { name: 'St. Anton am Arlberg Bahnhof' }
+            to: { name: 'Innsbruck Hbf' }
+            number: RJX 765
+            platform: '3'
+            seat: 17C
+          - index: 1
+            type: tram
+            from: { name: 'Innsbruck Hbf' }
+            to: { name: 'Innsbruck Airport' }
+            line: S5
+          - index: 2
+            type: flight
+            from: { name: 'Innsbruck Airport', code: INN }
+            to: { name: 'Venice Airport', code: VCE }
+            flightNumber: AA904
+            gate: '10'
+            seat: 18B
+            baggage: self-check-in
+        stepsHuman:
+          - '0. Start.'
+          - '1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.'
+          - '2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.'
+          - '3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.'
+          - '4. Last destination reached.'
+        createdAt: 2025-08-08T10:00:00Z
+    HumanReadableExample:
+      summary: Human-readable itinerary
+      value: |-
+        0. Start.
+        1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.
+        2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
+        3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.
+        4. Last destination reached.
