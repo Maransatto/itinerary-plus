@@ -1,0 +1,5 @@
+0. Start.
+1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.
+2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
+3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.
+4. Last destination reached. 

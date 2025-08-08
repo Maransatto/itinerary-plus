@@ -1,0 +1,28 @@
+{
+  "tickets": [
+    {
+      "type": "train",
+      "from": { "name": "St. Anton am Arlberg Bahnhof" },
+      "to": { "name": "Innsbruck Hbf" },
+      "number": "RJX 765",
+      "platform": "3",
+      "seat": "17C"
+    },
+    {
+      "type": "tram",
+      "from": { "name": "Innsbruck Hbf" },
+      "to": { "name": "Innsbruck Airport" },
+      "line": "S5"
+    },
+    {
+      "type": "flight",
+      "from": { "name": "Innsbruck Airport", "code": "INN" },
+      "to": { "name": "Venice Airport", "code": "VCE" },
+      "flightNumber": "AA904",
+      "gate": "10",
+      "seat": "18B",
+      "baggage": "self-check-in"
+    }
+  ],
+  "render": "both"
+}

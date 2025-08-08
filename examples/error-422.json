@@ -1,0 +1,7 @@
+{
+  "status": 422,
+  "code": "DISCONNECTED_ITINERARY",
+  "message": "Tickets do not form a single uninterrupted path.",
+  "details": { "breakAt": "Innsbruck Airport" },
+  "correlationId": "req_01J8XXXXXX"
+}

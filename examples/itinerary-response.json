@@ -1,0 +1,41 @@
+{
+  "id": "5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b",
+  "start": { "name": "St. Anton am Arlberg Bahnhof" },
+  "end": { "name": "Venice Airport", "code": "VCE" },
+  "items": [
+    {
+      "index": 0,
+      "type": "train",
+      "from": { "name": "St. Anton am Arlberg Bahnhof" },
+      "to": { "name": "Innsbruck Hbf" },
+      "number": "RJX 765",
+      "platform": "3",
+      "seat": "17C"
+    },
+    {
+      "index": 1,
+      "type": "tram",
+      "from": { "name": "Innsbruck Hbf" },
+      "to": { "name": "Innsbruck Airport" },
+      "line": "S5"
+    },
+    {
+      "index": 2,
+      "type": "flight",
+      "from": { "name": "Innsbruck Airport", "code": "INN" },
+      "to": { "name": "Venice Airport", "code": "VCE" },
+      "flightNumber": "AA904",
+      "gate": "10",
+      "seat": "18B",
+      "baggage": "self-check-in"
+    }
+  ],
+  "stepsHuman": [
+    "0. Start.",
+    "1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.",
+    "2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.",
+    "3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.",
+    "4. Last destination reached."
+  ],
+  "createdAt": "2025-08-08T10:00:00Z"
+}

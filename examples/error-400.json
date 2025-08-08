@@ -1,0 +1,6 @@
+{
+  "status": 400,
+  "code": "BAD_REQUEST",
+  "message": ["tickets should not be empty"],
+  "correlationId": "req_01J8YYYYYY"
+}
