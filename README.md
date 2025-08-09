@@ -309,11 +309,40 @@ The database uses a well-structured entity model with the following relationship
 - **JSONB Columns**: Flexible storage for metadata and human-readable steps
 - **Unidirectional Relationships**: Simplified entity relationships to avoid circular dependencies
 
-### Phase 3: Service Layer (Upcoming)
+#### Repository Layer
 
-- **Service Implementation**: Create service layer with initial mocked logic for business operations
-- **Repository Integration**: Implement repositories to handle database operations through TypeORM
-- **Data Persistence**: Connect services to repositories for actual database interactions
+The data access layer uses custom repositories that extend TypeORM functionality:
+
+**PlaceRepository**:
+
+- `findOrCreate(name, code?)`: Auto-create places if they don't exist
+- `findByNameAndCode()`: Efficient lookup with optional code matching
+- `findByNames()`: Batch operations for multiple places
+
+**TicketRepository**:
+
+- `createTicket()`: Polymorphic ticket creation with proper inheritance
+- `findByFromPlace()` / `findByToPlace()`: Route-based queries for sorting
+- `saveMultiple()`: Batch ticket creation with transactions
+
+**ItineraryRepository**:
+
+- `create()`: Complete itinerary creation with start/end places
+- `findByRoute()`: Find existing itineraries for similar routes
+- `findRecent()`: Analytics and recent activity tracking
+
+**ItineraryItemRepository**:
+
+- `createMultiple()`: Ordered ticket sequence creation
+- `findByItineraryId()`: Retrieve sorted items for an itinerary
+- `getMaxIndexForItinerary()`: Support for incremental additions
+
+### Phase 3: Service Layer 🚧 (Current)
+
+- **Repository Layer**: Custom repositories with TypeORM for data access abstraction ✅
+- **Service Implementation**: Create service layer with business logic for ticket sorting
+- **Algorithm Implementation**: Core ticket sorting algorithm with detailed error handling
+- **Human Formatter**: Convert sorted tickets to readable instructions
 
 ### Phase 4: Controller Layer (Upcoming)
 
