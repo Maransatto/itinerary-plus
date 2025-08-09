@@ -28,15 +28,24 @@ export class PlaceRepository {
   }
 
   /**
-   * Find or create a place by name and optional code
+   * Find or create a place by name, updating code if necessary
+   * This ensures place names are unique while allowing code updates
    */
   async findOrCreate(name: string, code?: string): Promise<Place> {
-    const existingPlace = await this.findByNameAndCode(name, code);
+    // First check if place exists by name (regardless of code)
+    const existingPlace = await this.findByNameOnly(name);
     
     if (existingPlace) {
+      // If place exists and we have a code to add/update
+      if (code && existingPlace.code !== code) {
+        // Update the existing place with the new code
+        existingPlace.code = code;
+        return this.placeRepository.save(existingPlace);
+      }
       return existingPlace;
     }
 
+    // Create new place if it doesn't exist
     const newPlace = new Place({ name, code });
     return this.placeRepository.save(newPlace);
   }
@@ -63,5 +72,23 @@ export class PlaceRepository {
    */
   async findById(id: string): Promise<Place | null> {
     return this.placeRepository.findOne({ where: { id } });
+  }
+
+  /**
+   * Find a place by name only (regardless of code)
+   */
+  async findByNameOnly(name: string): Promise<Place | null> {
+    return this.placeRepository
+      .createQueryBuilder('place')
+      .where('place.name = :name', { name })
+      .getOne();
+  }
+
+  /**
+   * Update a place's code
+   */
+  async updatePlaceCode(place: Place, code: string): Promise<Place> {
+    place.code = code;
+    return this.placeRepository.save(place);
   }
 } 

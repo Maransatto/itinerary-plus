@@ -22,7 +22,7 @@ export class Place {
     description: 'Display name of the place (station, airport, etc.)',
     example: 'St. Anton am Arlberg Bahnhof',
   })
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, unique: true })
   name: string;
 
   @ApiProperty({

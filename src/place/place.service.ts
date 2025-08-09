@@ -14,13 +14,19 @@ export class PlaceService {
    * This is the main method used during ticket processing
    */
   async findOrCreatePlace(placeData: CreatePlaceDto): Promise<Place> {
+    // Validate and normalize the input data
+    this.validatePlaceData(placeData);
+    
     this.logger.debug(`Finding or creating place: ${placeData.name} (${placeData.code || 'no code'})`);
     
     try {
+      // Use the repository's findOrCreate which handles uniqueness by name
       const place = await this.placeRepository.findOrCreate(placeData.name, placeData.code);
       
       if (place.createdAt && this.isRecentlyCreated(place.createdAt)) {
         this.logger.log(`Created new place: ${place.name} (${place.code || 'no code'})`);
+      } else if (place.updatedAt && this.isRecentlyCreated(place.updatedAt) && place.updatedAt > place.createdAt!) {
+        this.logger.log(`Updated place '${place.name}' with code '${place.code}'`);
       } else {
         this.logger.debug(`Using existing place: ${place.name} (${place.code || 'no code'})`);
       }
@@ -128,8 +134,14 @@ export class PlaceService {
       throw new Error('Place name is too long (maximum 255 characters)');
     }
 
-    if (placeData.code && placeData.code.length > 10) {
-      throw new Error('Place code is too long (maximum 10 characters)');
+    // Code is optional, but if provided must be valid
+    if (placeData.code !== undefined && placeData.code !== null) {
+      if (typeof placeData.code === 'string' && placeData.code.trim().length === 0) {
+        // Empty string code should be treated as no code
+        placeData.code = undefined;
+      } else if (placeData.code.length > 10) {
+        throw new Error('Place code is too long (maximum 10 characters)');
+      }
     }
 
     // Normalize data
