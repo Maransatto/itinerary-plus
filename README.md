@@ -188,6 +188,38 @@ This project follows a contract-first approach with systematic layered developme
 - **TypeORM Integration**: Configured TypeORM with proper entity relationships and migrations
 - **Entity Refinement**: Adjusted previously created entities to work with database constraints and relationships
 
+#### Database Setup
+
+1. **Start the PostgreSQL database**:
+
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+2. **Database Configuration**:
+   - **Host**: localhost
+   - **Port**: 5433 (to avoid conflicts with existing PostgreSQL installations)
+   - **Database**: itinerary_plus
+   - **Username**: kevin
+   - **Password**: mcallister2024
+
+3. **Verify database is running**:
+
+   ```bash
+   docker-compose ps
+   ```
+
+4. **Access database directly** (if needed):
+
+   ```bash
+   docker exec -it itinerary-plus-db psql -U kevin -d itinerary_plus
+   ```
+
+5. **Stop database**:
+   ```bash
+   docker-compose down
+   ```
+
 ### Phase 3: Service Layer (Upcoming)
 
 - **Service Implementation**: Create service layer with initial mocked logic for business operations

@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5433,
+            "driver": "PostgreSQL",
+            "name": "localhost",
+            "database": "itinerary_plus",
+            "username": "kevin",
+            "password": "mcallister2024"
+        }
+    ]
+}
