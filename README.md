@@ -187,6 +187,7 @@ This project follows a contract-first approach with systematic layered developme
 - **Docker Setup**: Created containerized PostgreSQL database environment
 - **TypeORM Integration**: Configured TypeORM with proper entity relationships and migrations
 - **Entity Refinement**: Added TypeORM decorators to all entities with proper relationships and constraints
+- **Database Migration**: Generated and executed initial schema migration, all tables created successfully
 
 #### Database Setup
 
@@ -263,8 +264,24 @@ After starting the database, you can use TypeORM commands for database managemen
    # Sync schema (development only)
    yarn schema:sync
 
-   # Drop all tables
-   yarn schema:drop
+       # Drop all tables
+    yarn schema:drop
+   ```
+
+4. **Run initial migration** (first time setup):
+
+   ```bash
+   yarn migration:run
+   ```
+
+5. **Verify database setup**:
+
+   ```bash
+   # Check tables were created
+   yarn typeorm query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+
+   # Test application startup
+   yarn start:dev
    ```
 
 #### Entity Structure
