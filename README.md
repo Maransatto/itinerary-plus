@@ -315,9 +315,13 @@ The data access layer uses custom repositories that extend TypeORM functionality
 
 **PlaceRepository**:
 
-- `findOrCreate(name, code?)`: Auto-create places if they don't exist
+- `findOrCreate(name, code?)`: Auto-create places if they don't exist with smart code updating
 - `findByNameAndCode()`: Efficient lookup with optional code matching
+- `findByNameOnly()`: Name-based lookup for unique name constraint
 - `findByNames()`: Batch operations for multiple places
+- `updatePlaceCode()`: Update existing place with new code information
+
+**Place Name Uniqueness**: Places are uniquely identified by name with database-level unique constraints. When a place exists without a code and a ticket provides a code for the same place name, the existing place is automatically updated with the new code rather than creating a duplicate.
 
 **TicketRepository**:
 
@@ -477,6 +481,58 @@ This algorithm prioritizes **user experience and detailed validation** over raw 
 - **User Feedback Priority**: Detailed error messages help users quickly identify and fix issues with their ticket data
 - **Safety Over Speed**: Multiple validation layers ensure users get correct results rather than fast but potentially wrong results
 - **Maintainability**: Clear, well-documented algorithm makes it easy for other developers to understand and extend
+
+#### Enhanced Error Messages for Disconnected Routes
+
+The sorting algorithm includes sophisticated **disconnected component detection** that provides highly detailed user feedback when tickets form multiple separate route segments instead of a single connected itinerary.
+
+**Problem:** Traditional graph algorithms often provide generic error messages like "Multiple starting points found (2)" which don't help users understand what's actually wrong with their data.
+
+**Solution:** Our algorithm analyzes the complete route structure and provides detailed insights about disconnected segments and potential connections needed.
+
+**Before:**
+
+```json
+{
+  "errors": [
+    "Multiple possible starting places found (2). Route may have branches.",
+    "Multiple possible ending places found (2). Route may have branches."
+  ]
+}
+```
+
+**After:**
+
+```json
+{
+  "errors": [
+    "Route has 2 disconnected segments. Segment 1: Gara Venetia Santa Lucia → Chicago O'Hare (4 tickets, 5 places); Segment 2: St. Anton am Arlberg Bahnhof → Venice Airport (3 tickets, 4 places). Potential connections needed: Missing: Chicago O'Hare → St. Anton am Arlberg Bahnhof; Missing: Venice Airport → Gara Venetia Santa Lucia"
+  ]
+}
+```
+
+**How It Works:**
+
+1. **Connected Component Detection**: Uses Depth-First Search (DFS) to identify all disconnected route segments
+2. **Segment Analysis**: For each segment, determines start/end places and counts tickets/places
+3. **Gap Analysis**: Identifies potential connections between segment endpoints
+4. **Actionable Feedback**: Provides specific missing connections that would create a single itinerary
+
+**Example Scenario:**
+
+Given tickets that form two disconnected segments:
+
+- **Segment 1**: Venice train → Bologna bus → Paris flight → Chicago flight
+- **Segment 2**: St. Anton train → Innsbruck tram → Venice flight
+
+The algorithm identifies that a connection between "Venice Airport" (end of segment 2) and "Gara Venetia Santa Lucia" (start of segment 1) would create a complete single itinerary.
+
+**Benefits:**
+
+✅ **Actionable**: Users know exactly which connections are missing  
+✅ **Diagnostic**: Clear understanding of route structure helps identify input errors  
+✅ **Developer-Friendly**: Makes debugging route issues much easier  
+✅ **Business-Friendly**: Provides insights that could drive product decisions about route optimization
 
 ### Phase 4: Controller Layer ✅ (Completed)
 

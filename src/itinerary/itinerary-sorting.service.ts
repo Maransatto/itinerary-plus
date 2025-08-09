@@ -18,6 +18,20 @@ export interface RouteGraph {
   outDegree: Map<string, number>; // place ID -> number of outgoing connections
 }
 
+export interface RouteSegment {
+  id: number;
+  start: Place;
+  end: Place;
+  places: Place[];
+  tickets: Ticket[];
+}
+
+export interface SegmentGap {
+  from: Place;
+  to: Place;
+  reason: string;
+}
+
 @Injectable()
 export class ItinerarySortingService {
   private readonly logger = new Logger(ItinerarySortingService.name);
@@ -226,16 +240,164 @@ export class ItinerarySortingService {
     if (startCandidateNames.length === 0) {
       errors.push('No starting place found (all places have incoming connections)');
     } else if (startCandidateNames.length > 1) {
-      errors.push(`Multiple possible starting places found: ${startCandidateNames.join(', ')}. Route may have branches.`);
+      // Check if this is due to disconnected components
+      const components = this.findConnectedComponents(graph);
+      if (components.length > 1) {
+        // Multiple disconnected segments - provide detailed analysis
+        const gaps = this.analyzeSegmentGaps(components);
+        
+        // Create detailed error with segment information
+        const segmentDetails = components.map(segment => 
+          `Segment ${segment.id}: ${segment.start.name} → ${segment.end.name} (${segment.tickets.length} tickets, ${segment.places.length} places)`
+        ).join('; ');
+        
+        const gapDetails = gaps.map(gap => 
+          `Missing: ${gap.from.name} → ${gap.to.name}`
+        ).join('; ');
+        
+        errors.push(`Route has ${components.length} disconnected segments. ${segmentDetails}. Potential connections needed: ${gapDetails}`);
+      } else {
+        errors.push(`Multiple possible starting places found: ${startCandidateNames.join(', ')}. Route may have branches.`);
+      }
     }
 
     if (endCandidateNames.length === 0) {
       errors.push('No ending place found (all places have outgoing connections)');
-    } else if (endCandidateNames.length > 1) {
+    } else if (endCandidateNames.length > 1 && startCandidateNames.length <= 1) {
+      // Only add end error if we haven't already handled disconnected components above
       errors.push(`Multiple possible ending places found: ${endCandidateNames.join(', ')}. Route may have branches.`);
     }
 
     return { isValid: errors.length === 0, errors, warnings };
+  }
+
+  /**
+   * Find all connected components (disconnected route segments) in the graph
+   */
+  private findConnectedComponents(graph: RouteGraph): RouteSegment[] {
+    const visited = new Set<string>();
+    const components: RouteSegment[] = [];
+    let componentId = 1;
+
+    graph.nodes.forEach((place, placeId) => {
+      if (!visited.has(placeId)) {
+        const component = this.exploreComponent(graph, placeId, visited);
+        if (component.places.length > 0) {
+          components.push({
+            id: componentId++,
+            ...component
+          });
+        }
+      }
+    });
+
+    return components;
+  }
+
+  /**
+   * Explore a single connected component using DFS
+   */
+  private exploreComponent(graph: RouteGraph, startPlaceId: string, visited: Set<string>): Omit<RouteSegment, 'id'> {
+    const componentPlaces: Place[] = [];
+    const componentTickets: Ticket[] = [];
+    const stack: string[] = [startPlaceId];
+
+    while (stack.length > 0) {
+      const currentPlaceId = stack.pop()!;
+      
+      if (visited.has(currentPlaceId)) {
+        continue;
+      }
+
+      visited.add(currentPlaceId);
+      const currentPlace = graph.nodes.get(currentPlaceId);
+      if (currentPlace) {
+        componentPlaces.push(currentPlace);
+      }
+
+      // Add outgoing tickets and next places
+      const outgoingTickets = graph.edges.get(currentPlaceId) || [];
+      outgoingTickets.forEach(ticket => {
+        componentTickets.push(ticket);
+        if (ticket.to?.id && !visited.has(ticket.to.id)) {
+          stack.push(ticket.to.id);
+        }
+      });
+
+      // Add incoming places (for reverse connections)
+      graph.edges.forEach((tickets, fromPlaceId) => {
+        tickets.forEach(ticket => {
+          if (ticket.to?.id === currentPlaceId && !visited.has(fromPlaceId)) {
+            stack.push(fromPlaceId);
+          }
+        });
+      });
+    }
+
+    // Determine start and end places for this component
+    const startPlace = this.findComponentStart(componentPlaces, graph);
+    const endPlace = this.findComponentEnd(componentPlaces, graph);
+
+    return {
+      start: startPlace,
+      end: endPlace,
+      places: componentPlaces,
+      tickets: componentTickets
+    };
+  }
+
+  /**
+   * Find the start place of a component (place with no incoming connections within component)
+   */
+  private findComponentStart(places: Place[], graph: RouteGraph): Place {
+    for (const place of places) {
+      const inDegree = graph.inDegree.get(place.id!) || 0;
+      if (inDegree === 0) {
+        return place;
+      }
+    }
+    // Fallback to first place if no clear start (shouldn't happen in valid components)
+    return places[0];
+  }
+
+  /**
+   * Find the end place of a component (place with no outgoing connections within component)
+   */
+  private findComponentEnd(places: Place[], graph: RouteGraph): Place {
+    for (const place of places) {
+      const outDegree = graph.outDegree.get(place.id!) || 0;
+      if (outDegree === 0) {
+        return place;
+      }
+    }
+    // Fallback to last place if no clear end (shouldn't happen in valid components)
+    return places[places.length - 1];
+  }
+
+  /**
+   * Analyze gaps between disconnected route segments
+   */
+  private analyzeSegmentGaps(segments: RouteSegment[]): SegmentGap[] {
+    const gaps: SegmentGap[] = [];
+
+    // For each pair of segments, check if one's end could connect to another's start
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = 0; j < segments.length; j++) {
+        if (i !== j) {
+          const segmentA = segments[i];
+          const segmentB = segments[j];
+          
+          // Check if segment A's end could connect to segment B's start
+          gaps.push({
+            from: segmentA.end,
+            to: segmentB.start,
+            reason: `Would connect segment ${segmentA.id} (ending at ${segmentA.end.name}) to segment ${segmentB.id} (starting at ${segmentB.start.name})`
+          });
+        }
+      }
+    }
+
+    return gaps;
   }
 
   /**
