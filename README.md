@@ -163,7 +163,7 @@ You can mock the endpoints from the OpenAPI contract immediately.
 
 ## Postman import note
 
-Postman may show “Too many levels of nesting to fake this schema” when importing OpenAPI 3.1 with `oneOf` + `allOf` inheritance.
+Postman may show "Too many levels of nesting to fake this schema" when importing OpenAPI 3.1 with `oneOf` + `allOf` inheritance.
 
 Workarounds:
 
@@ -309,11 +309,145 @@ The database uses a well-structured entity model with the following relationship
 - **JSONB Columns**: Flexible storage for metadata and human-readable steps
 - **Unidirectional Relationships**: Simplified entity relationships to avoid circular dependencies
 
-### Phase 3: Service Layer (Upcoming)
+#### Repository Layer
 
-- **Service Implementation**: Create service layer with initial mocked logic for business operations
-- **Repository Integration**: Implement repositories to handle database operations through TypeORM
-- **Data Persistence**: Connect services to repositories for actual database interactions
+The data access layer uses custom repositories that extend TypeORM functionality:
+
+**PlaceRepository**:
+
+- `findOrCreate(name, code?)`: Auto-create places if they don't exist
+- `findByNameAndCode()`: Efficient lookup with optional code matching
+- `findByNames()`: Batch operations for multiple places
+
+**TicketRepository**:
+
+- `createTicket()`: Polymorphic ticket creation with proper inheritance
+- `findByFromPlace()` / `findByToPlace()`: Route-based queries for sorting
+- `saveMultiple()`: Batch ticket creation with transactions
+
+**ItineraryRepository**:
+
+- `create()`: Complete itinerary creation with start/end places
+- `findByRoute()`: Find existing itineraries for similar routes
+- `findRecent()`: Analytics and recent activity tracking
+
+**ItineraryItemRepository**:
+
+- `createMultiple()`: Ordered ticket sequence creation
+- `findByItineraryId()`: Retrieve sorted items for an itinerary
+- `getMaxIndexForItinerary()`: Support for incremental additions
+
+### Phase 3: Service Layer ✅ (Completed)
+
+- **Repository Layer**: Custom repositories with TypeORM for data access abstraction ✅
+- **Sorting Algorithm**: Directed graph algorithm with comprehensive validation and error reporting ✅
+- **Service Implementation**: Business logic layer with detailed user feedback ✅
+- **Human Formatter**: Convert sorted tickets to readable instructions (Pending)
+
+#### Itinerary Sorting Algorithm
+
+The sorting service uses a **directed graph algorithm** specifically designed for **user experience and detailed validation** over performance optimization. This approach is ideal for travel itineraries because we prioritize user feedback and expect small datasets (typical itineraries have 5-15 tickets, not thousands).
+
+**Algorithm Overview:**
+
+The algorithm works in 6 phases:
+
+1. **Basic Validation**: Check ticket validity and basic requirements
+2. **Graph Construction**: Build a directed graph where places are nodes and tickets are edges
+3. **Graph Structure Validation**: Analyze the graph for topological correctness
+4. **Start/End Detection**: Find the unique start and end points using degree analysis
+5. **Graph Traversal**: Walk through the graph to sort tickets in order
+6. **Final Validation**: Verify the resulting sequence is complete and connected
+
+**Visual Example:**
+
+Here's how the algorithm works with a sample itinerary:
+
+```mermaid
+graph LR
+    A["St. Anton<br/>(out: 1, in: 0)<br/>🟢 START"]
+    B["Innsbruck Hbf<br/>(out: 1, in: 1)"]
+    C["Innsbruck Airport<br/>(out: 1, in: 1)"]
+    D["Venice Airport<br/>(out: 0, in: 1)<br/>🔴 END"]
+
+    A -->|"Train RJX 765<br/>Platform 3, Seat 17C"| B
+    B -->|"Tram S5"| C
+    C -->|"Flight AA904<br/>Gate 10, Seat 18B"| D
+
+    style A fill:#90EE90
+    style D fill:#FFB6C1
+    style B fill:#87CEEB
+    style C fill:#87CEEB
+```
+
+**Key Algorithm Features:**
+
+**Degree Analysis for Start/End Detection:**
+
+- **Start place**: `outDegree > inDegree` (more departures than arrivals)
+- **End place**: `inDegree > outDegree` (more arrivals than departures)
+- **Middle places**: `inDegree = outDegree` (balanced connections)
+
+**Comprehensive Error Detection:**
+
+- **Multiple branches**: Place has `outDegree > 1` (warns about route options)
+- **Circular routes**: Revisiting already visited places during traversal
+- **Disconnected segments**: Gaps between consecutive tickets in final sequence
+- **Invalid endpoints**: No clear start/end or multiple possible starting points
+- **Isolated places**: Places with no incoming or outgoing connections
+
+**Algorithm Steps in Detail:**
+
+1. **Basic Validation** (`validateBasicRequirements`):
+   - Ensures all tickets have valid from/to places
+   - Detects tickets with same departure and arrival places
+   - Returns early for single-ticket itineraries
+
+2. **Graph Construction** (`buildRouteGraph`):
+   - Places become nodes, tickets become directed edges
+   - Tracks in-degree and out-degree for each place
+   - Builds adjacency list representation for efficient traversal
+
+3. **Structure Validation** (`validateGraphStructure`):
+   - Counts start candidates (outDegree > inDegree)
+   - Counts end candidates (inDegree > outDegree)
+   - Detects isolated places and excessive branching
+   - Ensures exactly one start and one end for valid linear path
+
+4. **Endpoint Detection** (`findStartAndEndPlaces`):
+   - Identifies unique start and end places using degree analysis
+   - Validates that there's exactly one of each
+
+5. **Graph Traversal** (`traverseGraphToSort`):
+   - Starts from identified start place
+   - Follows single outgoing edge at each step
+   - Detects multiple route options and circular routes
+   - Builds sorted ticket sequence
+
+6. **Final Validation** (`validateSortedSequence`):
+   - Verifies all consecutive tickets connect properly
+   - Warns about potential timing issues between similar transport types
+   - Ensures complete path uses all provided tickets
+
+**Why This Algorithm:**
+
+✅ **User-Friendly**: Provides detailed error messages explaining exactly what's wrong  
+✅ **Robust Validation**: Multiple validation layers catch edge cases and provide warnings  
+✅ **Clear Logic**: Easy to understand, debug, and maintain  
+✅ **Perfect for Travel**: Handles typical travel scenarios with excellent feedback  
+✅ **Safety First**: Prevents incorrect sorting through comprehensive checks
+
+❌ **Not for Big Data**: O(n²) complexity would be inefficient for massive datasets  
+❌ **Sequential Only**: Doesn't handle complex multi-path routing or parallel routes
+
+**Design Philosophy:**
+
+This algorithm prioritizes **user experience and detailed validation** over raw performance because:
+
+- **Small Datasets**: Travel itineraries typically contain 5-15 tickets, making performance optimization unnecessary
+- **User Feedback Priority**: Detailed error messages help users quickly identify and fix issues with their ticket data
+- **Safety Over Speed**: Multiple validation layers ensure users get correct results rather than fast but potentially wrong results
+- **Maintainability**: Clear, well-documented algorithm makes it easy for other developers to understand and extend
 
 ### Phase 4: Controller Layer (Upcoming)
 
@@ -350,6 +484,7 @@ _Note: The granular normalization is not in scope for the current implementation
 
 ## Next Steps (implementation)
 
-- Complete TypeORM entity relationships and migrations
-- Implement service layer with sorting algorithm
-- Wire up controllers with proper validation
+- ✅ Complete TypeORM entity relationships and migrations
+- ✅ Implement service layer with sorting algorithm
+- 🚧 Implement human-readable formatter service
+- 📋 Wire up controllers with proper validation
