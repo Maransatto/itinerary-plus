@@ -2,12 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
-import { TicketCreationData, TicketService } from '../ticket/ticket.service';
+import { CreateTicket, TicketService } from '../ticket/ticket.service';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
 import { IdempotencyKey } from './entities/idempotency.entity';
 import { Itinerary } from './entities/itinerary.entity';
 import { ItineraryItemRepository } from './itinerary-item.repository';
-import { ItinerarySortingService, SortingResult } from './itinerary-sorting.service';
+import {
+  ItinerarySortingService,
+  SortingResult,
+} from './itinerary-sorting.service';
 import { ItineraryRepository } from './itinerary.repository';
 
 export interface ItineraryCreationResult {
@@ -33,21 +36,30 @@ export class ItineraryService {
   /**
    * Create a complete itinerary from unsorted ticket data
    */
-  async createItinerary(createItineraryDto: CreateItineraryDto, idempotencyKey?: string): Promise<ItineraryCreationResult> {
+  async createItinerary(
+    createItineraryDto: CreateItineraryDto,
+    idempotencyKey?: string,
+  ): Promise<ItineraryCreationResult> {
     const { tickets: ticketsData, render } = createItineraryDto;
-    
-    this.logger.debug(`Creating itinerary from ${ticketsData.length} tickets${idempotencyKey ? ` with idempotency key: ${idempotencyKey}` : ''}`);
+
+    this.logger.debug(
+      `Creating itinerary from ${ticketsData.length} tickets${idempotencyKey ? ` with idempotency key: ${idempotencyKey}` : ''}`,
+    );
 
     // Check for idempotency key
     if (idempotencyKey) {
       const existingKey = await this.idempotencyRepository.findOne({
-        where: { key: idempotencyKey }
+        where: { key: idempotencyKey },
       });
 
       if (existingKey) {
-        this.logger.debug(`Found existing itinerary for idempotency key: ${idempotencyKey}`);
-        const existingItinerary = await this.findItineraryById(existingKey.itineraryId);
-        
+        this.logger.debug(
+          `Found existing itinerary for idempotency key: ${idempotencyKey}`,
+        );
+        const existingItinerary = await this.findItineraryById(
+          existingKey.itineraryId,
+        );
+
         if (existingItinerary) {
           return {
             itinerary: existingItinerary,
@@ -69,29 +81,36 @@ export class ItineraryService {
     try {
       // Step 1: Create tickets from input data
       const tickets = await this.ticketService.createMultipleTickets(
-        ticketsData as TicketCreationData[]
+        ticketsData as CreateTicket[],
       );
       this.logger.debug(`Created ${tickets.length} tickets in database`);
 
       // Step 2: Sort tickets into proper order
-      const sortingResult: SortingResult = await this.sortingService.sortTickets(tickets);
-      
+      const sortingResult: SortingResult =
+        await this.sortingService.sortTickets(tickets);
+
       if (!sortingResult.isValid) {
         result.errors = sortingResult.errors;
         result.warnings = sortingResult.warnings;
-        this.logger.warn(`Failed to sort tickets: ${sortingResult.errors.join(', ')}`);
+        this.logger.warn(
+          `Failed to sort tickets: ${sortingResult.errors.join(', ')}`,
+        );
         return result;
       }
 
       // Step 3: Generate human-readable steps if requested
       let humanSteps: string[] | undefined;
       if (render === 'human' || render === 'both') {
-        humanSteps = this.generateHumanReadableSteps(sortingResult.sortedTickets);
+        humanSteps = this.generateHumanReadableSteps(
+          sortingResult.sortedTickets,
+        );
       }
 
       // Step 4: Create itinerary entity
       if (!sortingResult.startPlace || !sortingResult.endPlace) {
-        result.errors.push('Could not determine start or end place for itinerary');
+        result.errors.push(
+          'Could not determine start or end place for itinerary',
+        );
         return result;
       }
 
@@ -122,7 +141,7 @@ export class ItineraryService {
           itineraryId: itinerary.id!,
           contentHash,
         });
-        
+
         try {
           await this.idempotencyRepository.save(idempotencyRecord);
           this.logger.debug(`Saved idempotency key: ${idempotencyKey}`);
@@ -132,9 +151,10 @@ export class ItineraryService {
         }
       }
 
-      this.logger.log(`Successfully created itinerary ${itinerary.id} with ${items.length} items`);
+      this.logger.log(
+        `Successfully created itinerary ${itinerary.id} with ${items.length} items`,
+      );
       return result;
-
     } catch (error) {
       this.logger.error('Failed to create itinerary', error);
       result.errors.push(`Failed to create itinerary: ${error.message}`);
@@ -150,7 +170,7 @@ export class ItineraryService {
 
     try {
       const itinerary = await this.itineraryRepository.findById(id);
-      
+
       if (itinerary) {
         // Load itinerary items
         const items = await this.itineraryItemRepository.findByItineraryId(id);
@@ -172,7 +192,7 @@ export class ItineraryService {
 
     try {
       const itinerary = await this.findItineraryById(id);
-      
+
       if (!itinerary) {
         return null;
       }
@@ -183,7 +203,7 @@ export class ItineraryService {
       }
 
       // Generate human steps from tickets
-      const tickets = itinerary.items.map(item => item.ticket);
+      const tickets = itinerary.items.map((item) => item.ticket);
       const humanSteps = this.generateHumanReadableSteps(tickets);
 
       // Update itinerary with generated steps
@@ -202,7 +222,7 @@ export class ItineraryService {
    */
   private generateHumanReadableSteps(tickets: any[]): string[] {
     const steps: string[] = [];
-    
+
     // Start step
     steps.push('0. Start.');
 
@@ -244,7 +264,8 @@ export class ItineraryService {
             if (ticket.baggage === 'self-check-in') {
               step += ' Self-check-in luggage at counter.';
             } else if (ticket.baggage === 'auto-transfer') {
-              step += ' Luggage will transfer automatically from the last flight.';
+              step +=
+                ' Luggage will transfer automatically from the last flight.';
             } else if (ticket.baggage === 'counter') {
               step += ' Check in luggage at counter.';
             }
@@ -321,7 +342,7 @@ export class ItineraryService {
   }> {
     // Implementation placeholder for analytics
     const totalItineraries = await this.itineraryRepository.count();
-    
+
     return {
       totalItineraries,
       averageStops: 0, // Would require complex query
@@ -336,4 +357,4 @@ export class ItineraryService {
     const content = JSON.stringify(dto, Object.keys(dto).sort());
     return crypto.createHash('sha256').update(content).digest('hex');
   }
-} 
+}

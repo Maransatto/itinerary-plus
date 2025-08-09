@@ -35,12 +35,13 @@ export class ItineraryItemRepository {
     tickets: Ticket[],
     itineraryId: string,
   ): Promise<ItineraryItem[]> {
-    const items = tickets.map((ticket, index) => 
-      new ItineraryItem({
-        ticket,
-        index,
-        itineraryId,
-      })
+    const items = tickets.map(
+      (ticket, index) =>
+        new ItineraryItem({
+          ticket,
+          index,
+          itineraryId,
+        }),
     );
 
     return this.itineraryItemRepository.save(items);
@@ -147,4 +148,4 @@ export class ItineraryItemRepository {
 
     return result?.maxIndex ?? -1;
   }
-} 
+}

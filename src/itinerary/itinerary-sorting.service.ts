@@ -61,7 +61,9 @@ export class ItinerarySortingService {
 
       // Step 2: Build route graph
       const graph = this.buildRouteGraph(tickets);
-      this.logger.debug(`Built graph with ${graph.nodes.size} places and ${tickets.length} connections`);
+      this.logger.debug(
+        `Built graph with ${graph.nodes.size} places and ${tickets.length} connections`,
+      );
 
       // Step 3: Validate graph structure
       const graphValidation = this.validateGraphStructure(graph);
@@ -84,14 +86,19 @@ export class ItinerarySortingService {
         return result;
       }
 
-      const sortingResult = this.traverseGraphToSort(graph, endpoints.startPlace);
+      const sortingResult = this.traverseGraphToSort(
+        graph,
+        endpoints.startPlace,
+      );
       if (!sortingResult.isValid) {
         result.errors = sortingResult.errors;
         return result;
       }
 
       // Step 6: Final validation
-      const finalValidation = this.validateSortedSequence(sortingResult.sortedTickets);
+      const finalValidation = this.validateSortedSequence(
+        sortingResult.sortedTickets,
+      );
       if (!finalValidation.isValid) {
         result.errors = finalValidation.errors;
         return result;
@@ -102,11 +109,15 @@ export class ItinerarySortingService {
       result.startPlace = endpoints.startPlace;
       result.endPlace = endpoints.endPlace || null;
       result.isValid = true;
-      result.warnings = [...graphValidation.warnings, ...finalValidation.warnings];
+      result.warnings = [
+        ...graphValidation.warnings,
+        ...finalValidation.warnings,
+      ];
 
-      this.logger.log(`Successfully sorted ${tickets.length} tickets from ${result.startPlace.name} to ${result.endPlace?.name || 'unknown'}`);
+      this.logger.log(
+        `Successfully sorted ${tickets.length} tickets from ${result.startPlace.name} to ${result.endPlace?.name || 'unknown'}`,
+      );
       return result;
-
     } catch (error) {
       this.logger.error('Unexpected error during ticket sorting', error);
       result.errors.push(`Unexpected error: ${error.message}`);
@@ -117,7 +128,10 @@ export class ItinerarySortingService {
   /**
    * Validate basic requirements for sorting
    */
-  private validateBasicRequirements(tickets: Ticket[]): { isValid: boolean; errors: string[] } {
+  private validateBasicRequirements(tickets: Ticket[]): {
+    isValid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (!tickets || tickets.length === 0) {
@@ -138,7 +152,9 @@ export class ItinerarySortingService {
         errors.push(`Ticket ${index + 1} has invalid 'to' place`);
       }
       if (ticket.from?.id && ticket.to?.id && ticket.from.id === ticket.to.id) {
-        errors.push(`Ticket ${index + 1} has same 'from' and 'to' place: ${ticket.from.name}`);
+        errors.push(
+          `Ticket ${index + 1} has same 'from' and 'to' place: ${ticket.from.name}`,
+        );
       }
     });
 
@@ -157,7 +173,7 @@ export class ItinerarySortingService {
     };
 
     // Add all places as nodes and initialize degrees
-    tickets.forEach(ticket => {
+    tickets.forEach((ticket) => {
       if (!ticket.from?.id || !ticket.to?.id) {
         return; // Skip invalid tickets
       }
@@ -178,7 +194,7 @@ export class ItinerarySortingService {
     });
 
     // Add edges and update degrees
-    tickets.forEach(ticket => {
+    tickets.forEach((ticket) => {
       if (!ticket.from?.id || !ticket.to?.id) {
         return; // Skip invalid tickets
       }
@@ -202,15 +218,19 @@ export class ItinerarySortingService {
   /**
    * Validate the graph structure for a valid path
    */
-  private validateGraphStructure(graph: RouteGraph): { isValid: boolean; errors: string[]; warnings: string[] } {
+  private validateGraphStructure(graph: RouteGraph): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  } {
     const errors: string[] = [];
     const warnings: string[] = [];
 
     // Collect places with different degree patterns
     const startCandidateNames: string[] = []; // outDegree > inDegree
-    const endCandidateNames: string[] = [];   // inDegree > outDegree
-    const isolatedPlaceNames: string[] = [];  // both degrees = 0
-    const balancedPlaceNames: string[] = [];  // inDegree = outDegree
+    const endCandidateNames: string[] = []; // inDegree > outDegree
+    const isolatedPlaceNames: string[] = []; // both degrees = 0
+    const balancedPlaceNames: string[] = []; // inDegree = outDegree
 
     graph.nodes.forEach((place, placeId) => {
       const inDeg = graph.inDegree.get(placeId) || 0;
@@ -229,43 +249,63 @@ export class ItinerarySortingService {
 
       // Check for excessive branching
       if (outDeg > 1) {
-        warnings.push(`Place '${place.name}' has ${outDeg} outgoing connections - multiple route options`);
+        warnings.push(
+          `Place '${place.name}' has ${outDeg} outgoing connections - multiple route options`,
+        );
       }
       if (inDeg > 1) {
-        warnings.push(`Place '${place.name}' has ${inDeg} incoming connections - potential merge point`);
+        warnings.push(
+          `Place '${place.name}' has ${inDeg} incoming connections - potential merge point`,
+        );
       }
     });
 
     // For a valid linear path, we should have exactly 1 start and 1 end
     if (startCandidateNames.length === 0) {
-      errors.push('No starting place found (all places have incoming connections)');
+      errors.push(
+        'No starting place found (all places have incoming connections)',
+      );
     } else if (startCandidateNames.length > 1) {
       // Check if this is due to disconnected components
       const components = this.findConnectedComponents(graph);
       if (components.length > 1) {
         // Multiple disconnected segments - provide detailed analysis
         const gaps = this.analyzeSegmentGaps(components);
-        
+
         // Create detailed error with segment information
-        const segmentDetails = components.map(segment => 
-          `Segment ${segment.id}: ${segment.start.name} → ${segment.end.name} (${segment.tickets.length} tickets, ${segment.places.length} places)`
-        ).join('; ');
-        
-        const gapDetails = gaps.map(gap => 
-          `Missing: ${gap.from.name} → ${gap.to.name}`
-        ).join('; ');
-        
-        errors.push(`Route has ${components.length} disconnected segments. ${segmentDetails}. Potential connections needed: ${gapDetails}`);
+        const segmentDetails = components
+          .map(
+            (segment) =>
+              `Segment ${segment.id}: ${segment.start.name} → ${segment.end.name} (${segment.tickets.length} tickets, ${segment.places.length} places)`,
+          )
+          .join('; ');
+
+        const gapDetails = gaps
+          .map((gap) => `Missing: ${gap.from.name} → ${gap.to.name}`)
+          .join('; ');
+
+        errors.push(
+          `Route has ${components.length} disconnected segments. ${segmentDetails}. Potential connections needed: ${gapDetails}`,
+        );
       } else {
-        errors.push(`Multiple possible starting places found: ${startCandidateNames.join(', ')}. Route may have branches.`);
+        errors.push(
+          `Multiple possible starting places found: ${startCandidateNames.join(', ')}. Route may have branches.`,
+        );
       }
     }
 
     if (endCandidateNames.length === 0) {
-      errors.push('No ending place found (all places have outgoing connections)');
-    } else if (endCandidateNames.length > 1 && startCandidateNames.length <= 1) {
+      errors.push(
+        'No ending place found (all places have outgoing connections)',
+      );
+    } else if (
+      endCandidateNames.length > 1 &&
+      startCandidateNames.length <= 1
+    ) {
       // Only add end error if we haven't already handled disconnected components above
-      errors.push(`Multiple possible ending places found: ${endCandidateNames.join(', ')}. Route may have branches.`);
+      errors.push(
+        `Multiple possible ending places found: ${endCandidateNames.join(', ')}. Route may have branches.`,
+      );
     }
 
     return { isValid: errors.length === 0, errors, warnings };
@@ -285,7 +325,7 @@ export class ItinerarySortingService {
         if (component.places.length > 0) {
           components.push({
             id: componentId++,
-            ...component
+            ...component,
           });
         }
       }
@@ -297,14 +337,18 @@ export class ItinerarySortingService {
   /**
    * Explore a single connected component using DFS
    */
-  private exploreComponent(graph: RouteGraph, startPlaceId: string, visited: Set<string>): Omit<RouteSegment, 'id'> {
+  private exploreComponent(
+    graph: RouteGraph,
+    startPlaceId: string,
+    visited: Set<string>,
+  ): Omit<RouteSegment, 'id'> {
     const componentPlaces: Place[] = [];
     const componentTickets: Ticket[] = [];
     const stack: string[] = [startPlaceId];
 
     while (stack.length > 0) {
       const currentPlaceId = stack.pop()!;
-      
+
       if (visited.has(currentPlaceId)) {
         continue;
       }
@@ -317,7 +361,7 @@ export class ItinerarySortingService {
 
       // Add outgoing tickets and next places
       const outgoingTickets = graph.edges.get(currentPlaceId) || [];
-      outgoingTickets.forEach(ticket => {
+      outgoingTickets.forEach((ticket) => {
         componentTickets.push(ticket);
         if (ticket.to?.id && !visited.has(ticket.to.id)) {
           stack.push(ticket.to.id);
@@ -326,7 +370,7 @@ export class ItinerarySortingService {
 
       // Add incoming places (for reverse connections)
       graph.edges.forEach((tickets, fromPlaceId) => {
-        tickets.forEach(ticket => {
+        tickets.forEach((ticket) => {
           if (ticket.to?.id === currentPlaceId && !visited.has(fromPlaceId)) {
             stack.push(fromPlaceId);
           }
@@ -342,7 +386,7 @@ export class ItinerarySortingService {
       start: startPlace,
       end: endPlace,
       places: componentPlaces,
-      tickets: componentTickets
+      tickets: componentTickets,
     };
   }
 
@@ -386,12 +430,12 @@ export class ItinerarySortingService {
         if (i !== j) {
           const segmentA = segments[i];
           const segmentB = segments[j];
-          
+
           // Check if segment A's end could connect to segment B's start
           gaps.push({
             from: segmentA.end,
             to: segmentB.start,
-            reason: `Would connect segment ${segmentA.id} (ending at ${segmentA.end.name}) to segment ${segmentB.id} (starting at ${segmentB.start.name})`
+            reason: `Would connect segment ${segmentA.id} (ending at ${segmentA.end.name}) to segment ${segmentB.id} (starting at ${segmentB.start.name})`,
           });
         }
       }
@@ -403,11 +447,11 @@ export class ItinerarySortingService {
   /**
    * Find the start and end places of the route
    */
-  private findStartAndEndPlaces(graph: RouteGraph): { 
-    isValid: boolean; 
-    startPlace?: Place; 
-    endPlace?: Place; 
-    errors: string[] 
+  private findStartAndEndPlaces(graph: RouteGraph): {
+    isValid: boolean;
+    startPlace?: Place;
+    endPlace?: Place;
+    errors: string[];
   } {
     const errors: string[] = [];
     let startPlace: Place | undefined;
@@ -437,18 +481,21 @@ export class ItinerarySortingService {
       errors.push('Could not determine ending place');
     }
 
-    return { 
-      isValid: errors.length === 0, 
-      startPlace, 
-      endPlace, 
-      errors 
+    return {
+      isValid: errors.length === 0,
+      startPlace,
+      endPlace,
+      errors,
     };
   }
 
   /**
    * Traverse the graph to sort tickets in order
    */
-  private traverseGraphToSort(graph: RouteGraph, startPlace: Place): {
+  private traverseGraphToSort(
+    graph: RouteGraph,
+    startPlace: Place,
+  ): {
     isValid: boolean;
     sortedTickets: Ticket[];
     errors: string[];
@@ -456,7 +503,7 @@ export class ItinerarySortingService {
     const errors: string[] = [];
     const sortedTickets: Ticket[] = [];
     const visitedPlaces = new Set<string>();
-    
+
     let currentPlaceId: string | undefined = startPlace.id;
     if (!currentPlaceId) {
       errors.push('Start place has no valid ID');
@@ -467,37 +514,43 @@ export class ItinerarySortingService {
 
     while (currentPlaceId) {
       const outgoingTickets = graph.edges.get(currentPlaceId) || [];
-      
+
       if (outgoingTickets.length === 0) {
         // End of route
         break;
       }
 
       if (outgoingTickets.length > 1) {
-        errors.push(`Multiple route options from '${graph.nodes.get(currentPlaceId)?.name}' - cannot determine single path`);
+        errors.push(
+          `Multiple route options from '${graph.nodes.get(currentPlaceId)?.name}' - cannot determine single path`,
+        );
         break;
       }
 
       const nextTicket = outgoingTickets[0];
       sortedTickets.push(nextTicket);
-      
+
       currentPlaceId = nextTicket.to.id;
       if (!currentPlaceId) {
         errors.push('Ticket destination has no valid ID');
         break;
       }
-      
+
       if (visitedPlaces.has(currentPlaceId)) {
         errors.push(`Circular route detected at '${nextTicket.to.name}'`);
         break;
       }
-      
+
       visitedPlaces.add(currentPlaceId);
     }
 
     // Verify we used all tickets
-    if (sortedTickets.length !== Array.from(graph.edges.values()).flat().length) {
-      errors.push(`Could not create complete path - used ${sortedTickets.length} of ${Array.from(graph.edges.values()).flat().length} tickets`);
+    if (
+      sortedTickets.length !== Array.from(graph.edges.values()).flat().length
+    ) {
+      errors.push(
+        `Could not create complete path - used ${sortedTickets.length} of ${Array.from(graph.edges.values()).flat().length} tickets`,
+      );
     }
 
     return {
@@ -510,10 +563,10 @@ export class ItinerarySortingService {
   /**
    * Final validation of the sorted sequence
    */
-  private validateSortedSequence(tickets: Ticket[]): { 
-    isValid: boolean; 
-    errors: string[]; 
-    warnings: string[] 
+  private validateSortedSequence(tickets: Ticket[]): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -531,17 +584,21 @@ export class ItinerarySortingService {
       if (currentTicket.to.id !== nextTicket.from.id) {
         errors.push(
           `Gap in route between ticket ${i + 1} and ${i + 2}: ` +
-          `'${currentTicket.to.name}' does not connect to '${nextTicket.from.name}'`
+            `'${currentTicket.to.name}' does not connect to '${nextTicket.from.name}'`,
         );
       }
 
       // Check for potential timing issues (warning only)
-      if (currentTicket.type === nextTicket.type && 
-          currentTicket.to.name === nextTicket.from.name) {
-        warnings.push(`Potential tight connection at '${currentTicket.to.name}' between two ${currentTicket.type} tickets`);
+      if (
+        currentTicket.type === nextTicket.type &&
+        currentTicket.to.name === nextTicket.from.name
+      ) {
+        warnings.push(
+          `Potential tight connection at '${currentTicket.to.name}' between two ${currentTicket.type} tickets`,
+        );
       }
     }
 
     return { isValid: errors.length === 0, errors, warnings };
   }
-} 
+}

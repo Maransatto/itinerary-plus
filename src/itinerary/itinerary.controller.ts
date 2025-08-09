@@ -89,25 +89,33 @@ export class ItineraryController {
     @Body() createItineraryDto: CreateItineraryDto,
     @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<Itinerary> {
-    this.logger.debug(`Creating itinerary with ${createItineraryDto.tickets.length} tickets`);
+    this.logger.debug(
+      `Creating itinerary with ${createItineraryDto.tickets.length} tickets`,
+    );
 
     try {
-      const result = await this.itineraryService.createItinerary(createItineraryDto, idempotencyKey);
+      const result = await this.itineraryService.createItinerary(
+        createItineraryDto,
+        idempotencyKey,
+      );
 
       if (!result.isValid) {
-        this.logger.warn(`Itinerary creation failed: ${result.errors.join(', ')}`);
-        
+        this.logger.warn(
+          `Itinerary creation failed: ${result.errors.join(', ')}`,
+        );
+
         this.handleSortingErrors(result);
       }
 
       // Log warnings if any
       if (result.warnings.length > 0) {
-        this.logger.warn(`Itinerary created with warnings: ${result.warnings.join(', ')}`);
+        this.logger.warn(
+          `Itinerary created with warnings: ${result.warnings.join(', ')}`,
+        );
       }
 
       this.logger.log(`Successfully created itinerary ${result.itinerary!.id}`);
       return result.itinerary!;
-
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -149,7 +157,7 @@ export class ItineraryController {
 
     try {
       const itinerary = await this.itineraryService.findItineraryById(id);
-      
+
       if (!itinerary) {
         throw new NotFoundException({
           message: 'Itinerary not found',
@@ -161,20 +169,20 @@ export class ItineraryController {
       const acceptHeader = res.req.headers.accept;
       if (acceptHeader === 'text/plain') {
         res.header('Content-Type', 'text/plain');
-        
-        const humanSteps = await this.itineraryService.getHumanReadableItinerary(id);
+
+        const humanSteps =
+          await this.itineraryService.getHumanReadableItinerary(id);
         if (!humanSteps) {
           throw new InternalServerErrorException({
             message: 'Unable to generate human-readable format',
           });
         }
-        
+
         return humanSteps.join('\n');
       }
 
       this.logger.debug(`Successfully retrieved itinerary: ${id}`);
       return itinerary;
-
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -215,8 +223,9 @@ export class ItineraryController {
     this.logger.debug(`Retrieving human-readable itinerary: ${id}`);
 
     try {
-      const humanSteps = await this.itineraryService.getHumanReadableItinerary(id);
-      
+      const humanSteps =
+        await this.itineraryService.getHumanReadableItinerary(id);
+
       if (!humanSteps) {
         throw new NotFoundException({
           message: 'Itinerary not found',
@@ -224,15 +233,19 @@ export class ItineraryController {
         });
       }
 
-      this.logger.debug(`Successfully retrieved human-readable itinerary: ${id}`);
+      this.logger.debug(
+        `Successfully retrieved human-readable itinerary: ${id}`,
+      );
       return humanSteps.join('\n');
-
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
 
-      this.logger.error(`Error retrieving human-readable itinerary: ${id}`, error);
+      this.logger.error(
+        `Error retrieving human-readable itinerary: ${id}`,
+        error,
+      );
       throw new InternalServerErrorException({
         message: 'An unexpected error occurred while retrieving the itinerary',
         error: error.message,
@@ -243,7 +256,10 @@ export class ItineraryController {
   /**
    * Helper method to handle sorting errors and throw appropriate HTTP exceptions
    */
-  private handleSortingErrors(result: { errors: string[]; warnings: string[] }): never {
+  private handleSortingErrors(result: {
+    errors: string[];
+    warnings: string[];
+  }): never {
     if (this.hasValidationErrors(result.errors)) {
       throw new BadRequestException({
         message: 'Invalid input data',
@@ -270,10 +286,11 @@ export class ItineraryController {
    * Check if errors contain validation-related issues
    */
   private hasValidationErrors(errors: string[]): boolean {
-    return errors.some(error => 
-      error.toLowerCase().includes('required') || 
-      error.toLowerCase().includes('invalid') || 
-      error.toLowerCase().includes('empty')
+    return errors.some(
+      (error) =>
+        error.toLowerCase().includes('required') ||
+        error.toLowerCase().includes('invalid') ||
+        error.toLowerCase().includes('empty'),
     );
   }
 
@@ -281,13 +298,14 @@ export class ItineraryController {
    * Check if errors contain business rule violations
    */
   private hasBusinessRuleErrors(errors: string[]): boolean {
-    return errors.some(error => 
-      error.toLowerCase().includes('route') || 
-      error.toLowerCase().includes('path') || 
-      error.toLowerCase().includes('connection') ||
-      error.toLowerCase().includes('circular') ||
-      error.toLowerCase().includes('multiple') ||
-      error.toLowerCase().includes('branch')
+    return errors.some(
+      (error) =>
+        error.toLowerCase().includes('route') ||
+        error.toLowerCase().includes('path') ||
+        error.toLowerCase().includes('connection') ||
+        error.toLowerCase().includes('circular') ||
+        error.toLowerCase().includes('multiple') ||
+        error.toLowerCase().includes('branch'),
     );
   }
 }

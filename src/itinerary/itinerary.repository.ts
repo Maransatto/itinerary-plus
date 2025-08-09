@@ -68,7 +68,10 @@ export class ItineraryRepository {
   /**
    * Find itineraries by route (start and end places)
    */
-  async findByRoute(startPlaceId: string, endPlaceId: string): Promise<Itinerary[]> {
+  async findByRoute(
+    startPlaceId: string,
+    endPlaceId: string,
+  ): Promise<Itinerary[]> {
     return this.itineraryRepository
       .createQueryBuilder('itinerary')
       .leftJoinAndSelect('itinerary.start', 'startPlace')
@@ -118,4 +121,4 @@ export class ItineraryRepository {
   async count(): Promise<number> {
     return this.itineraryRepository.count();
   }
-} 
+}
