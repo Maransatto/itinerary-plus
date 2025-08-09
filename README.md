@@ -182,11 +182,11 @@ This project follows a contract-first approach with systematic layered developme
 - **Swagger Integration**: Set up Swagger UI for API documentation and testing
 - **Mock Samples**: Provided JSON examples in `examples/` directory to support other teams for mocking and testing
 
-### Phase 2: Database Layer 🚧 (Current)
+### Phase 2: Database Layer ✅ (Completed)
 
 - **Docker Setup**: Created containerized PostgreSQL database environment
 - **TypeORM Integration**: Configured TypeORM with proper entity relationships and migrations
-- **Entity Refinement**: Adjusted previously created entities to work with database constraints and relationships
+- **Entity Refinement**: Added TypeORM decorators to all entities with proper relationships and constraints
 
 #### Database Setup
 
@@ -266,6 +266,31 @@ After starting the database, you can use TypeORM commands for database managemen
    # Drop all tables
    yarn schema:drop
    ```
+
+#### Entity Structure
+
+The database uses a well-structured entity model with the following relationships:
+
+**Core Entities:**
+
+- **Place**: Stores transportation hubs (airports, stations, etc.) with optional codes
+- **Ticket** (Abstract): Base entity using Single Table Inheritance for all ticket types
+  - **FlightTicket**: Airlines, flight numbers, gates, baggage handling
+  - **TrainTicket**: Train lines, numbers, platforms
+  - **BusTicket**: Routes and operators
+  - **TramTicket**: Tram lines
+  - **BoatTicket**: Vessels and docks
+  - **TaxiTicket**: Companies, drivers, vehicle IDs
+- **Itinerary**: Complete travel plans with start/end places
+- **ItineraryItem**: Ordered tickets within an itinerary
+
+**Key Design Decisions:**
+
+- **UUID Primary Keys**: All entities use UUID for better distribution and security
+- **Single Table Inheritance**: All ticket types stored in one table with a discriminator column
+- **Eager Loading**: Place relationships are eagerly loaded for performance
+- **JSONB Columns**: Flexible storage for metadata and human-readable steps
+- **Unidirectional Relationships**: Simplified entity relationships to avoid circular dependencies
 
 ### Phase 3: Service Layer (Upcoming)
 
