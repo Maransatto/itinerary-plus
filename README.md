@@ -171,8 +171,185 @@ Workarounds:
 - Or switch the spec to OpenAPI 3.0.3 and reduce `allOf` depth (e.g., avoid `ItineraryItem` inheriting from `Ticket`).
 - Or keep the spec as-is and rely on the concrete JSON examples in `examples/` for Postman requests.
 
+## Development Progress
+
+This project follows a contract-first approach with systematic layered development:
+
+### Phase 1: Contract & API Design ✅
+
+- **DTOs and Entities**: Created comprehensive data transfer objects and entity models for tickets, places, and itineraries
+- **OpenAPI Specification**: Defined complete API contract in `openapi.yaml` with proper validation schemas
+- **Swagger Integration**: Set up Swagger UI for API documentation and testing
+- **Mock Samples**: Provided JSON examples in `examples/` directory to support other teams for mocking and testing
+
+### Phase 2: Database Layer ✅ (Completed)
+
+- **Docker Setup**: Created containerized PostgreSQL database environment
+- **TypeORM Integration**: Configured TypeORM with proper entity relationships and migrations
+- **Entity Refinement**: Added TypeORM decorators to all entities with proper relationships and constraints
+- **Database Migration**: Generated and executed initial schema migration, all tables created successfully
+
+#### Database Setup
+
+1. **Start the PostgreSQL database**:
+
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+2. **Database Configuration**:
+   - **Host**: localhost
+   - **Port**: 5433 (to avoid conflicts with existing PostgreSQL installations)
+   - **Database**: itinerary_plus
+   - **Username**: kevin
+   - **Password**: mcallister2024
+
+3. **Verify database is running**:
+
+   ```bash
+   docker-compose ps
+   ```
+
+4. **Access database directly** (if needed):
+
+   ```bash
+   docker exec -it itinerary-plus-db psql -U kevin -d itinerary_plus
+   ```
+
+5. **Stop database**:
+   ```bash
+   docker-compose down
+   ```
+
+#### TypeORM Setup
+
+After starting the database, you can use TypeORM commands for database management:
+
+1. **Environment Variables**: Create a `.env` file (optional, defaults work with Docker setup):
+
+   ```bash
+   # Database Configuration
+   DB_HOST=localhost
+   DB_PORT=5433
+   DB_USERNAME=kevin
+   DB_PASSWORD=mcallister2024
+   DB_NAME=itinerary_plus
+
+   # Application
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+2. **Test database connection**:
+
+   ```bash
+   yarn typeorm query "SELECT version()"
+   ```
+
+3. **Available TypeORM commands**:
+
+   ```bash
+   # Generate migration from entity changes
+   yarn migration:generate src/migrations/MigrationName
+
+   # Create empty migration file
+   yarn migration:create src/migrations/MigrationName
+
+   # Run pending migrations
+   yarn migration:run
+
+   # Revert last migration
+   yarn migration:revert
+
+   # Sync schema (development only)
+   yarn schema:sync
+
+       # Drop all tables
+    yarn schema:drop
+   ```
+
+4. **Run initial migration** (first time setup):
+
+   ```bash
+   yarn migration:run
+   ```
+
+5. **Verify database setup**:
+
+   ```bash
+   # Check tables were created
+   yarn typeorm query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+
+   # Test application startup
+   yarn start:dev
+   ```
+
+#### Entity Structure
+
+The database uses a well-structured entity model with the following relationships:
+
+**Core Entities:**
+
+- **Place**: Stores transportation hubs (airports, stations, etc.) with optional codes
+- **Ticket** (Abstract): Base entity using Single Table Inheritance for all ticket types
+  - **FlightTicket**: Airlines, flight numbers, gates, baggage handling
+  - **TrainTicket**: Train lines, numbers, platforms
+  - **BusTicket**: Routes and operators
+  - **TramTicket**: Tram lines
+  - **BoatTicket**: Vessels and docks
+  - **TaxiTicket**: Companies, drivers, vehicle IDs
+- **Itinerary**: Complete travel plans with start/end places
+- **ItineraryItem**: Ordered tickets within an itinerary
+
+**Key Design Decisions:**
+
+- **UUID Primary Keys**: All entities use UUID for better distribution and security
+- **Single Table Inheritance**: All ticket types stored in one table with a discriminator column
+- **Eager Loading**: Place relationships are eagerly loaded for performance
+- **JSONB Columns**: Flexible storage for metadata and human-readable steps
+- **Unidirectional Relationships**: Simplified entity relationships to avoid circular dependencies
+
+### Phase 3: Service Layer (Upcoming)
+
+- **Service Implementation**: Create service layer with initial mocked logic for business operations
+- **Repository Integration**: Implement repositories to handle database operations through TypeORM
+- **Data Persistence**: Connect services to repositories for actual database interactions
+
+### Phase 4: Controller Layer (Upcoming)
+
+- **Controller Implementation**: Wire up NestJS controllers to use the service layer
+- **Request/Response Handling**: Implement proper HTTP handling with validation and error responses
+- **API Contract Compliance**: Ensure controllers match the OpenAPI specification
+
+### Phase 5: Testing Layer (Upcoming)
+
+- **Unit Tests**: Comprehensive Jest test coverage for services and utilities
+- **Integration Tests**: End-to-end tests for API endpoints
+- **Test Data**: Create fixtures and test scenarios
+
+### Database Design Notes
+
+The current implementation creates a simplified data model where the `create itinerary` endpoint will:
+
+- **Auto-create places and tickets**: If places or tickets don't exist in the database, they will be created automatically
+- **Accept some redundancy**: Initially, tickets may contain duplicate information (e.g., multiple flight tickets for the same flight but different seats)
+
+**Future Enhancement Opportunities:**
+
+- **Granular flight data**: Extract shared flight information (airline, flight number, departure time, aircraft type) into a separate `Flight` entity
+- **Train service normalization**: Create a `TrainService` entity with train number, route, operator, and schedule that multiple train tickets can reference
+- **Bus route optimization**: Implement `BusRoute` entities containing service number, operator, and route details shared across multiple bus tickets
+- **Boat/Ferry services**: Extract vessel information, operator, and route into reusable `BoatService` entities
+- **Transportation hubs**: Create `TransportationHub` entities for airports, train stations, and bus terminals with detailed facility information
+- **Ticket normalization**: Create relationships where multiple tickets can reference the same underlying transportation service
+- **Optimized storage**: Reduce data duplication by normalizing transportation services and shared infrastructure
+
+_Note: The granular normalization is not in scope for the current implementation, prioritizing rapid development and API functionality._
+
+---
+
 ## Next Steps (implementation)
 
-- Scaffold NestJS controllers/DTOs to match the contract
-- Integrate Swagger UI to serve `/openapi.json` (generated from decorators)
-- Implement sorting and rendering services
+- Complete TypeORM entity relationships and migrations
+- Implement service layer with sorting algorithm
+- Wire up controllers with proper validation

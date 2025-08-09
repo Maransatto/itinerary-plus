@@ -1,7 +1,11 @@
+import { ChildEntity, Column } from 'typeorm';
 import { Ticket, TicketType } from './ticket.entity';
 
+@ChildEntity(TicketType.TRAM)
 export class TramTicket extends Ticket {
-  type: TicketType.TRAM = TicketType.TRAM;
+  declare type: TicketType.TRAM;
+
+  @Column({ type: 'varchar', length: 20 })
   line: string;
 
   constructor(data: Partial<TramTicket>) {
