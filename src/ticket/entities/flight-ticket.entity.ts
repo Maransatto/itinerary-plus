@@ -20,10 +20,10 @@ export class FlightTicket extends Ticket {
   @Column({ type: 'varchar', length: 10, nullable: true })
   gate?: string;
 
-  @Column({ 
-    type: 'enum', 
-    enum: BaggageType, 
-    nullable: true 
+  @Column({
+    type: 'enum',
+    enum: BaggageType,
+    nullable: true,
   })
   baggage?: BaggageType;
 

@@ -34,7 +34,7 @@ export class PlaceRepository {
   async findOrCreate(name: string, code?: string): Promise<Place> {
     // First check if place exists by name (regardless of code)
     const existingPlace = await this.findByNameOnly(name);
-    
+
     if (existingPlace) {
       // If place exists and we have a code to add/update
       if (code && existingPlace.code !== code) {
@@ -91,4 +91,4 @@ export class PlaceRepository {
     place.code = code;
     return this.placeRepository.save(place);
   }
-} 
+}

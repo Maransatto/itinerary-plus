@@ -16,24 +16,42 @@ export class PlaceService {
   async findOrCreatePlace(placeData: CreatePlaceDto): Promise<Place> {
     // Validate and normalize the input data
     this.validatePlaceData(placeData);
-    
-    this.logger.debug(`Finding or creating place: ${placeData.name} (${placeData.code || 'no code'})`);
-    
+
+    this.logger.debug(
+      `Finding or creating place: ${placeData.name} (${placeData.code || 'no code'})`,
+    );
+
     try {
       // Use the repository's findOrCreate which handles uniqueness by name
-      const place = await this.placeRepository.findOrCreate(placeData.name, placeData.code);
-      
+      const place = await this.placeRepository.findOrCreate(
+        placeData.name,
+        placeData.code,
+      );
+
       if (place.createdAt && this.isRecentlyCreated(place.createdAt)) {
-        this.logger.log(`Created new place: ${place.name} (${place.code || 'no code'})`);
-      } else if (place.updatedAt && this.isRecentlyCreated(place.updatedAt) && place.updatedAt > place.createdAt!) {
-        this.logger.log(`Updated place '${place.name}' with code '${place.code}'`);
+        this.logger.log(
+          `Created new place: ${place.name} (${place.code || 'no code'})`,
+        );
+      } else if (
+        place.updatedAt &&
+        this.isRecentlyCreated(place.updatedAt) &&
+        place.updatedAt > place.createdAt!
+      ) {
+        this.logger.log(
+          `Updated place '${place.name}' with code '${place.code}'`,
+        );
       } else {
-        this.logger.debug(`Using existing place: ${place.name} (${place.code || 'no code'})`);
+        this.logger.debug(
+          `Using existing place: ${place.name} (${place.code || 'no code'})`,
+        );
       }
-      
+
       return place;
     } catch (error) {
-      this.logger.error(`Failed to find or create place: ${placeData.name}`, error);
+      this.logger.error(
+        `Failed to find or create place: ${placeData.name}`,
+        error,
+      );
       throw new Error(`Unable to process place: ${placeData.name}`);
     }
   }
@@ -42,18 +60,20 @@ export class PlaceService {
    * Batch process multiple places for efficiency
    * Used when processing multiple tickets at once
    */
-  async findOrCreateMultiplePlaces(placesData: CreatePlaceDto[]): Promise<Place[]> {
+  async findOrCreateMultiplePlaces(
+    placesData: CreatePlaceDto[],
+  ): Promise<Place[]> {
     this.logger.debug(`Processing ${placesData.length} places`);
-    
+
     const results: Place[] = [];
-    
+
     // Process places sequentially to avoid race conditions
     // on place creation with same name
     for (const placeData of placesData) {
       const place = await this.findOrCreatePlace(placeData);
       results.push(place);
     }
-    
+
     this.logger.debug(`Successfully processed ${results.length} places`);
     return results;
   }
@@ -63,7 +83,7 @@ export class PlaceService {
    */
   getUniquePlaces(placesData: CreatePlaceDto[]): CreatePlaceDto[] {
     const seen = new Set<string>();
-    return placesData.filter(place => {
+    return placesData.filter((place) => {
       const key = `${place.name}|${place.code || ''}`;
       if (seen.has(key)) {
         return false;
@@ -78,7 +98,7 @@ export class PlaceService {
    */
   async findById(id: string): Promise<Place | null> {
     this.logger.debug(`Finding place by ID: ${id}`);
-    
+
     try {
       return await this.placeRepository.findById(id);
     } catch (error) {
@@ -92,11 +112,11 @@ export class PlaceService {
    */
   async searchByName(name: string): Promise<Place[]> {
     this.logger.debug(`Searching places by name: ${name}`);
-    
+
     // This would require a more complex repository method
     // For now, we'll implement basic functionality
     const allNames = [name]; // In a real implementation, this might be a LIKE query
-    
+
     try {
       return await this.placeRepository.findByNames(allNames);
     } catch (error) {
@@ -136,7 +156,10 @@ export class PlaceService {
 
     // Code is optional, but if provided must be valid
     if (placeData.code !== undefined && placeData.code !== null) {
-      if (typeof placeData.code === 'string' && placeData.code.trim().length === 0) {
+      if (
+        typeof placeData.code === 'string' &&
+        placeData.code.trim().length === 0
+      ) {
         // Empty string code should be treated as no code
         placeData.code = undefined;
       } else if (placeData.code.length > 10) {
@@ -158,4 +181,4 @@ export class PlaceService {
     const fiveSecondsAgo = new Date(Date.now() - 5000);
     return createdAt > fiveSecondsAgo;
   }
-} 
+}

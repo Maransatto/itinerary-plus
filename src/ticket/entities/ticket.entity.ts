@@ -6,7 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   TableInheritance,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
 import { Place } from '../../place/entities/place.entity';
 
