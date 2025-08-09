@@ -220,6 +220,53 @@ This project follows a contract-first approach with systematic layered developme
    docker-compose down
    ```
 
+#### TypeORM Setup
+
+After starting the database, you can use TypeORM commands for database management:
+
+1. **Environment Variables**: Create a `.env` file (optional, defaults work with Docker setup):
+
+   ```bash
+   # Database Configuration
+   DB_HOST=localhost
+   DB_PORT=5433
+   DB_USERNAME=kevin
+   DB_PASSWORD=mcallister2024
+   DB_NAME=itinerary_plus
+
+   # Application
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+2. **Test database connection**:
+
+   ```bash
+   yarn typeorm query "SELECT version()"
+   ```
+
+3. **Available TypeORM commands**:
+
+   ```bash
+   # Generate migration from entity changes
+   yarn migration:generate src/migrations/MigrationName
+
+   # Create empty migration file
+   yarn migration:create src/migrations/MigrationName
+
+   # Run pending migrations
+   yarn migration:run
+
+   # Revert last migration
+   yarn migration:revert
+
+   # Sync schema (development only)
+   yarn schema:sync
+
+   # Drop all tables
+   yarn schema:drop
+   ```
+
 ### Phase 3: Service Layer (Upcoming)
 
 - **Service Implementation**: Create service layer with initial mocked logic for business operations
