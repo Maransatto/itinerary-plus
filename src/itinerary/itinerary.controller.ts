@@ -95,39 +95,7 @@ export class ItineraryController {
       if (!result.isValid) {
         this.logger.warn(`Itinerary creation failed: ${result.errors.join(', ')}`);
         
-        // Categorize errors for appropriate HTTP status codes
-        const hasValidationErrors = result.errors.some(error => 
-          error.includes('required') || 
-          error.includes('invalid') || 
-          error.includes('empty')
-        );
-
-        const hasBusinessRuleErrors = result.errors.some(error => 
-          error.includes('route') || 
-          error.includes('path') || 
-          error.includes('connection') ||
-          error.includes('circular') ||
-          error.includes('multiple')
-        );
-
-        if (hasValidationErrors) {
-          throw new BadRequestException({
-            message: 'Invalid input data',
-            errors: result.errors,
-            warnings: result.warnings,
-          });
-        } else if (hasBusinessRuleErrors) {
-          throw new UnprocessableEntityException({
-            message: 'Tickets do not form a valid itinerary',
-            errors: result.errors,
-            warnings: result.warnings,
-          });
-        } else {
-          throw new InternalServerErrorException({
-            message: 'Unable to process itinerary',
-            errors: result.errors,
-          });
-        }
+        this.handleSortingErrors(result);
       }
 
       // Log warnings if any
@@ -268,5 +236,56 @@ export class ItineraryController {
         error: error.message,
       });
     }
+  }
+
+  /**
+   * Helper method to handle sorting errors and throw appropriate HTTP exceptions
+   */
+  private handleSortingErrors(result: { errors: string[]; warnings: string[] }): never {
+    if (this.hasValidationErrors(result.errors)) {
+      throw new BadRequestException({
+        message: 'Invalid input data',
+        errors: result.errors,
+        warnings: result.warnings,
+      });
+    }
+
+    if (this.hasBusinessRuleErrors(result.errors)) {
+      throw new UnprocessableEntityException({
+        message: 'Tickets do not form a valid itinerary',
+        errors: result.errors,
+        warnings: result.warnings,
+      });
+    }
+
+    throw new InternalServerErrorException({
+      message: 'Unable to process itinerary',
+      errors: result.errors,
+    });
+  }
+
+  /**
+   * Check if errors contain validation-related issues
+   */
+  private hasValidationErrors(errors: string[]): boolean {
+    return errors.some(error => 
+      error.toLowerCase().includes('required') || 
+      error.toLowerCase().includes('invalid') || 
+      error.toLowerCase().includes('empty')
+    );
+  }
+
+  /**
+   * Check if errors contain business rule violations
+   */
+  private hasBusinessRuleErrors(errors: string[]): boolean {
+    return errors.some(error => 
+      error.toLowerCase().includes('route') || 
+      error.toLowerCase().includes('path') || 
+      error.toLowerCase().includes('connection') ||
+      error.toLowerCase().includes('circular') ||
+      error.toLowerCase().includes('multiple') ||
+      error.toLowerCase().includes('branch')
+    );
   }
 }

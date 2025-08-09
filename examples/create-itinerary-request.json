@@ -1,35 +1,13 @@
 {
   "tickets": [
     {
-      "type": "train",
-      "from": { "name": "St. Anton am Arlberg Bahnhof" },
-      "to": { "name": "Innsbruck Hbf" },
-      "number": "RJX 765",
-      "platform": "3",
-      "seat": "17C"
-    },
-    {
-      "type": "tram",
-      "from": { "name": "Innsbruck Hbf" },
-      "to": { "name": "Innsbruck Airport" },
-      "line": "S5"
-    },
-    {
       "type": "flight",
-      "from": { "name": "Innsbruck Airport", "code": "INN" },
-      "to": { "name": "Venice Airport", "code": "VCE" },
-      "flightNumber": "AA904",
-      "gate": "10",
-      "seat": "18B",
-      "baggage": "self-check-in"
-    },
-    {
-      "type": "train",
-      "from": { "name": "Gara Venetia Santa Lucia" },
-      "to": { "name": "Bologna San Ruffillo" },
-      "number": "ICN 35780",
-      "platform": "1",
-      "seat": "13F"
+      "from": { "name": "Paris CDG Airport", "code": "CDG" },
+      "to": { "name": "Chicago O'Hare", "code": "ORD" },
+      "flightNumber": "AF136",
+      "gate": "32",
+      "seat": "10A",
+      "baggage": "auto-transfer"
     },
     {
       "type": "bus",
@@ -47,13 +25,35 @@
       "baggage": "self-check-in"
     },
     {
+      "type": "train",
+      "from": { "name": "St. Anton am Arlberg Bahnhof" },
+      "to": { "name": "Innsbruck Hbf" },
+      "number": "RJX 765",
+      "platform": "3",
+      "seat": "17C"
+    },
+    {
       "type": "flight",
-      "from": { "name": "Paris CDG Airport", "code": "CDG" },
-      "to": { "name": "Chicago O'Hare", "code": "ORD" },
-      "flightNumber": "AF136",
-      "gate": "32",
-      "seat": "10A",
-      "baggage": "auto-transfer"
+      "from": { "name": "Innsbruck Airport", "code": "INN" },
+      "to": { "name": "Venice Airport", "code": "VCE" },
+      "flightNumber": "AA904",
+      "gate": "10",
+      "seat": "18B",
+      "baggage": "self-check-in"
+    },
+    {
+      "type": "tram",
+      "from": { "name": "Innsbruck Hbf" },
+      "to": { "name": "Innsbruck Airport" },
+      "line": "S5"
+    },
+    {
+      "type": "train",
+      "from": { "name": "Gara Venetia Santa Lucia" },
+      "to": { "name": "Bologna San Ruffillo" },
+      "number": "ICN 35780",
+      "platform": "1",
+      "seat": "13F"
     }
   ],
   "render": "both"
