@@ -337,6 +337,35 @@ The data access layer uses custom repositories that extend TypeORM functionality
 - `findByItineraryId()`: Retrieve sorted items for an itinerary
 - `getMaxIndexForItinerary()`: Support for incremental additions
 
+#### API Implementation
+
+The REST API is now fully functional with complete business logic integration:
+
+**POST `/v1/itineraries`**:
+
+- Accepts unsorted tickets and creates complete itinerary
+- Validates input data and sorts tickets using graph-based algorithm
+- Returns JSON with optional human-readable steps based on `render` parameter
+- Proper HTTP status codes: 201 (success), 400 (validation), 422 (business rules), 500 (server error)
+
+**GET `/v1/itineraries/:id`**:
+
+- Retrieves itinerary by ID with all related data
+- Content negotiation: JSON (default) or text/plain via Accept header
+- Returns 404 if itinerary not found
+
+**GET `/v1/itineraries/:id/human`**:
+
+- Convenience endpoint for human-readable format
+- Always returns text/plain content type
+- Generates step-by-step instructions for the complete journey
+
+**Error Handling**:
+
+- Comprehensive error categorization and HTTP status mapping
+- Detailed error messages for debugging and user feedback
+- Structured error responses with error arrays and warnings
+
 ### Phase 3: Service Layer ✅ (Completed)
 
 - **Repository Layer**: Custom repositories with TypeORM for data access abstraction ✅
@@ -449,11 +478,12 @@ This algorithm prioritizes **user experience and detailed validation** over raw 
 - **Safety Over Speed**: Multiple validation layers ensure users get correct results rather than fast but potentially wrong results
 - **Maintainability**: Clear, well-documented algorithm makes it easy for other developers to understand and extend
 
-### Phase 4: Controller Layer (Upcoming)
+### Phase 4: Controller Layer ✅ (Completed)
 
-- **Controller Implementation**: Wire up NestJS controllers to use the service layer
-- **Request/Response Handling**: Implement proper HTTP handling with validation and error responses
-- **API Contract Compliance**: Ensure controllers match the OpenAPI specification
+- **Controller Implementation**: Complete integration with service layer ✅
+- **Request/Response Handling**: HTTP error handling with proper status codes (400, 404, 422, 500) ✅
+- **API Contract Compliance**: All endpoints match OpenAPI specification exactly ✅
+- **Content Negotiation**: Support for JSON and text/plain responses via Accept headers ✅
 
 ### Phase 5: Testing Layer (Upcoming)
 
