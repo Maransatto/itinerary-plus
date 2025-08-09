@@ -12,7 +12,10 @@ export const databaseConfig: TypeOrmModuleOptions = {
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
   migrationsRun: false,
   migrationsTableName: 'typeorm_migrations',
 };
@@ -25,4 +28,4 @@ export const dataSourceOptions: DataSourceOptions = {
 } as DataSourceOptions;
 
 const dataSource = new DataSource(dataSourceOptions);
-export default dataSource; 
+export default dataSource;

@@ -6,7 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
 import { Place } from '../../place/entities/place.entity';
 import { Ticket } from '../../ticket/entities/ticket.entity';

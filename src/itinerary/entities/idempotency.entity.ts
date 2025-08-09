@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    Index,
-    PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryColumn,
 } from 'typeorm';
 
 @Entity('idempotency_keys')
@@ -41,4 +41,4 @@ export class IdempotencyKey {
   constructor(data: Partial<IdempotencyKey>) {
     Object.assign(this, data);
   }
-} 
+}
