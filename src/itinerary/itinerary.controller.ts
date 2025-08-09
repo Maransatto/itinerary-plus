@@ -1,13 +1,19 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Header,
   HttpCode,
+  HttpException,
   HttpStatus,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
   Param,
   Post,
   Res,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -18,16 +24,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { CreateItineraryDto, RenderType } from './dto/create-itinerary.dto';
-import { Itinerary } from './entities/itinerary.entity';
 import {
-  CreateTrainTicketDto,
-  CreateFlightTicketDto,
-  CreateTramTicketDto,
-  CreateBusTicketDto,
   CreateBoatTicketDto,
+  CreateBusTicketDto,
+  CreateFlightTicketDto,
   CreateTaxiTicketDto,
+  CreateTrainTicketDto,
+  CreateTramTicketDto,
 } from '../ticket/dto';
+import { CreateItineraryDto } from './dto/create-itinerary.dto';
+import { Itinerary } from './entities/itinerary.entity';
+import { ItineraryService } from './itinerary.service';
 
 @ApiTags('Itineraries')
 @ApiExtraModels(
@@ -40,6 +47,9 @@ import {
 )
 @Controller('v1/itineraries')
 export class ItineraryController {
+  private readonly logger = new Logger(ItineraryController.name);
+
+  constructor(private readonly itineraryService: ItineraryService) {}
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -53,86 +63,91 @@ export class ItineraryController {
     required: false,
   })
   @ApiResponse({
-    status: 201,
+    status: HttpStatus.CREATED,
     description: 'Itinerary created and sorted successfully',
     type: Itinerary,
   })
   @ApiResponse({
-    status: 400,
+    status: HttpStatus.BAD_REQUEST,
     description: 'The request was invalid (validation or malformed input)',
   })
   @ApiResponse({
-    status: 409,
+    status: HttpStatus.CONFLICT,
     description: 'The request conflicts with the current state',
   })
   @ApiResponse({
-    status: 422,
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
     description:
       'Business rule violation (e.g., tickets do not form a single uninterrupted path)',
   })
   @ApiResponse({
-    status: 500,
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Unexpected server error',
   })
   async createItinerary(
     @Body() createItineraryDto: CreateItineraryDto,
-  ): Promise<any> {
-    // TODO: Implement sorting logic
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  ): Promise<Itinerary> {
+    this.logger.debug(`Creating itinerary with ${createItineraryDto.tickets.length} tickets`);
 
-    // Mock response that matches what we expect
-    const mockResponse = {
-      id: '5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b',
-      start: { name: 'St. Anton am Arlberg Bahnhof' },
-      end: { name: 'Venice Airport', code: 'VCE' },
-      items: [
-        {
-          index: 0,
-          type: 'train',
-          from: { name: 'St. Anton am Arlberg Bahnhof' },
-          to: { name: 'Innsbruck Hbf' },
-          number: 'RJX 765',
-          platform: '3',
-          seat: '17C',
-        },
-        {
-          index: 1,
-          type: 'tram',
-          from: { name: 'Innsbruck Hbf' },
-          to: { name: 'Innsbruck Airport' },
-          line: 'S5',
-        },
-        {
-          index: 2,
-          type: 'flight',
-          from: { name: 'Innsbruck Airport', code: 'INN' },
-          to: { name: 'Venice Airport', code: 'VCE' },
-          flightNumber: 'AA904',
-          gate: '10',
-          seat: '18B',
-          baggage: 'self-check-in',
-        },
-      ],
-      stepsHuman: [
-        '0. Start.',
-        '1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.',
-        '2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.',
-        '3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.',
-        '4. Last destination reached.',
-      ],
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const result = await this.itineraryService.createItinerary(createItineraryDto);
 
-    // Include human-readable steps if requested
-    if (
-      createItineraryDto.render === RenderType.HUMAN ||
-      createItineraryDto.render === RenderType.BOTH
-    ) {
-      return mockResponse;
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { stepsHuman, ...responseWithoutHuman } = mockResponse;
-      return responseWithoutHuman;
+      if (!result.isValid) {
+        this.logger.warn(`Itinerary creation failed: ${result.errors.join(', ')}`);
+        
+        // Categorize errors for appropriate HTTP status codes
+        const hasValidationErrors = result.errors.some(error => 
+          error.includes('required') || 
+          error.includes('invalid') || 
+          error.includes('empty')
+        );
+
+        const hasBusinessRuleErrors = result.errors.some(error => 
+          error.includes('route') || 
+          error.includes('path') || 
+          error.includes('connection') ||
+          error.includes('circular') ||
+          error.includes('multiple')
+        );
+
+        if (hasValidationErrors) {
+          throw new BadRequestException({
+            message: 'Invalid input data',
+            errors: result.errors,
+            warnings: result.warnings,
+          });
+        } else if (hasBusinessRuleErrors) {
+          throw new UnprocessableEntityException({
+            message: 'Tickets do not form a valid itinerary',
+            errors: result.errors,
+            warnings: result.warnings,
+          });
+        } else {
+          throw new InternalServerErrorException({
+            message: 'Unable to process itinerary',
+            errors: result.errors,
+          });
+        }
+      }
+
+      // Log warnings if any
+      if (result.warnings.length > 0) {
+        this.logger.warn(`Itinerary created with warnings: ${result.warnings.join(', ')}`);
+      }
+
+      this.logger.log(`Successfully created itinerary ${result.itinerary!.id}`);
+      return result.itinerary!;
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error('Unexpected error creating itinerary', error);
+      throw new InternalServerErrorException({
+        message: 'An unexpected error occurred while creating the itinerary',
+        error: error.message,
+      });
     }
   }
 
@@ -148,70 +163,59 @@ export class ItineraryController {
     format: 'uuid',
   })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Itinerary found',
     type: Itinerary,
   })
   @ApiResponse({
-    status: 404,
+    status: HttpStatus.NOT_FOUND,
     description: 'The requested resource was not found',
   })
   async getItinerary(
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<any> {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  ): Promise<Itinerary | string> {
+    this.logger.debug(`Retrieving itinerary: ${id}`);
 
-    // TODO: Implement retrieval logic
-    const mockResponse = {
-      id,
-      start: { name: 'St. Anton am Arlberg Bahnhof' },
-      end: { name: 'Venice Airport', code: 'VCE' },
-      items: [
-        {
-          index: 0,
-          type: 'train',
-          from: { name: 'St. Anton am Arlberg Bahnhof' },
-          to: { name: 'Innsbruck Hbf' },
-          number: 'RJX 765',
-          platform: '3',
-          seat: '17C',
-        },
-        {
-          index: 1,
-          type: 'tram',
-          from: { name: 'Innsbruck Hbf' },
-          to: { name: 'Innsbruck Airport' },
-          line: 'S5',
-        },
-        {
-          index: 2,
-          type: 'flight',
-          from: { name: 'Innsbruck Airport', code: 'INN' },
-          to: { name: 'Venice Airport', code: 'VCE' },
-          flightNumber: 'AA904',
-          gate: '10',
-          seat: '18B',
-          baggage: 'self-check-in',
-        },
-      ],
-      stepsHuman: [
-        '0. Start.',
-        '1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.',
-        '2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.',
-        '3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.',
-        '4. Last destination reached.',
-      ],
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const itinerary = await this.itineraryService.findItineraryById(id);
+      
+      if (!itinerary) {
+        throw new NotFoundException({
+          message: 'Itinerary not found',
+          error: `No itinerary found with ID: ${id}`,
+        });
+      }
 
-    const acceptHeader = res.req.headers.accept;
-    if (acceptHeader === 'text/plain') {
-      res.header('Content-Type', 'text/plain');
-      return mockResponse.stepsHuman?.join('\n') || '';
+      // Check Accept header for text/plain response
+      const acceptHeader = res.req.headers.accept;
+      if (acceptHeader === 'text/plain') {
+        res.header('Content-Type', 'text/plain');
+        
+        const humanSteps = await this.itineraryService.getHumanReadableItinerary(id);
+        if (!humanSteps) {
+          throw new InternalServerErrorException({
+            message: 'Unable to generate human-readable format',
+          });
+        }
+        
+        return humanSteps.join('\n');
+      }
+
+      this.logger.debug(`Successfully retrieved itinerary: ${id}`);
+      return itinerary;
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Error retrieving itinerary: ${id}`, error);
+      throw new InternalServerErrorException({
+        message: 'An unexpected error occurred while retrieving the itinerary',
+        error: error.message,
+      });
     }
-
-    return mockResponse;
   }
 
   @Get(':id/human')
@@ -226,7 +230,7 @@ export class ItineraryController {
     format: 'uuid',
   })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Human-readable itinerary',
     content: {
       'text/plain': {
@@ -237,14 +241,32 @@ export class ItineraryController {
     },
   })
   @Header('Content-Type', 'text/plain')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getItineraryHuman(@Param('id') id: string): Promise<string> {
-    // TODO: Implement retrieval logic
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return `0. Start.
-1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.
-2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
-3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.
-4. Last destination reached.`;
+    this.logger.debug(`Retrieving human-readable itinerary: ${id}`);
+
+    try {
+      const humanSteps = await this.itineraryService.getHumanReadableItinerary(id);
+      
+      if (!humanSteps) {
+        throw new NotFoundException({
+          message: 'Itinerary not found',
+          error: `No itinerary found with ID: ${id}`,
+        });
+      }
+
+      this.logger.debug(`Successfully retrieved human-readable itinerary: ${id}`);
+      return humanSteps.join('\n');
+
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Error retrieving human-readable itinerary: ${id}`, error);
+      throw new InternalServerErrorException({
+        message: 'An unexpected error occurred while retrieving the itinerary',
+        error: error.message,
+      });
+    }
   }
 }
