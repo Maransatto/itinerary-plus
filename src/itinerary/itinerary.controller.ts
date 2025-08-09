@@ -59,7 +59,7 @@ export class ItineraryController {
       'Accepts a set of unsorted tickets, sorts them into a single uninterrupted itinerary, and returns the created itinerary with an identifier.',
   })
   @ApiHeader({
-    name: 'Idempotency-Key',
+    name: 'idempotency-key',
     description: 'Optional idempotency key to safely retry POST requests.',
     required: false,
   })
