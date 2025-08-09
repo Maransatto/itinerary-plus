@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 
-export class PlaceDto {
+export class CreatePlaceDto {
   @ApiProperty({
     description: 'Display name of the place (station, airport, etc.)',
     example: 'St. Anton am Arlberg Bahnhof',

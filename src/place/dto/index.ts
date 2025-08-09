@@ -1,1 +1,2 @@
-export * from './place.dto';
+export * from './create-place.dto';
+export * from './update-place.dto';

@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CreateItineraryDto, RenderType } from './dto/create-itinerary.dto';
-import { ItineraryDto } from './dto/itinerary.dto';
+import { Itinerary } from './entities/itinerary.entity';
 
 @ApiTags('Itineraries')
 @Controller('v1/itineraries')
@@ -38,7 +38,7 @@ export class ItineraryController {
   @ApiResponse({
     status: 201,
     description: 'Itinerary created and sorted successfully',
-    type: ItineraryDto,
+    type: Itinerary,
   })
   @ApiResponse({
     status: 400,
@@ -59,9 +59,12 @@ export class ItineraryController {
   })
   async createItinerary(
     @Body() createItineraryDto: CreateItineraryDto,
-  ): Promise<ItineraryDto> {
+  ): Promise<any> {
     // TODO: Implement sorting logic
-    const mockItinerary: ItineraryDto = {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Mock response that matches what we expect
+    const mockResponse = {
       id: '5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b',
       start: { name: 'St. Anton am Arlberg Bahnhof' },
       end: { name: 'Venice Airport', code: 'VCE' },
@@ -108,10 +111,11 @@ export class ItineraryController {
       createItineraryDto.render === RenderType.HUMAN ||
       createItineraryDto.render === RenderType.BOTH
     ) {
-      return mockItinerary;
+      return mockResponse;
     } else {
-      const { ...itineraryWithoutHuman } = mockItinerary;
-      return itineraryWithoutHuman as ItineraryDto;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { stepsHuman, ...responseWithoutHuman } = mockResponse;
+      return responseWithoutHuman;
     }
   }
 
@@ -129,7 +133,7 @@ export class ItineraryController {
   @ApiResponse({
     status: 200,
     description: 'Itinerary found',
-    type: ItineraryDto,
+    type: Itinerary,
   })
   @ApiResponse({
     status: 404,
@@ -138,9 +142,11 @@ export class ItineraryController {
   async getItinerary(
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<ItineraryDto | string> {
+  ): Promise<any> {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // TODO: Implement retrieval logic
-    const mockItinerary: ItineraryDto = {
+    const mockResponse = {
       id,
       start: { name: 'St. Anton am Arlberg Bahnhof' },
       end: { name: 'Venice Airport', code: 'VCE' },
@@ -185,10 +191,10 @@ export class ItineraryController {
     const acceptHeader = res.req.headers.accept;
     if (acceptHeader === 'text/plain') {
       res.header('Content-Type', 'text/plain');
-      return mockItinerary.stepsHuman?.join('\n') || '';
+      return mockResponse.stepsHuman?.join('\n') || '';
     }
 
-    return mockItinerary;
+    return mockResponse;
   }
 
   @Get(':id/human')
@@ -214,8 +220,10 @@ export class ItineraryController {
     },
   })
   @Header('Content-Type', 'text/plain')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getItineraryHuman(@Param('id') id: string): Promise<string> {
     // TODO: Implement retrieval logic
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return `0. Start.
 1. Board train RJX 765, Platform 3 from St. Anton am Arlberg Bahnhof to Innsbruck Hbf. Seat number 17C.
 2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
