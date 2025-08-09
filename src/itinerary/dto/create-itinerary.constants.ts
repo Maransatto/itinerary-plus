@@ -1,5 +1,14 @@
 export const EXAMPLE_TICKETS = [
   {
+    type: 'flight',
+    from: { name: 'Bologna Guglielmo Marconi Airport', code: 'BLQ' },
+    to: { name: 'Paris CDG Airport', code: 'CDG' },
+    flightNumber: 'AF1229',
+    gate: '22',
+    seat: '10A',
+    baggage: 'self-check-in',
+  },
+  {
     type: 'train',
     from: { name: 'St. Anton am Arlberg Bahnhof' },
     to: { name: 'Innsbruck Hbf' },
@@ -8,10 +17,25 @@ export const EXAMPLE_TICKETS = [
     seat: '17C',
   },
   {
+    type: 'flight',
+    from: { name: 'Paris CDG Airport', code: 'CDG' },
+    to: { name: "Chicago O'Hare", code: 'ORD' },
+    flightNumber: 'AF136',
+    gate: '32',
+    seat: '10A',
+    baggage: 'auto-transfer',
+  },
+  {
     type: 'tram',
     from: { name: 'Innsbruck Hbf' },
     to: { name: 'Innsbruck Airport' },
     line: 'S5',
+  },
+  {
+    type: 'bus',
+    from: { name: 'Bologna San Ruffillo' },
+    to: { name: 'Bologna Guglielmo Marconi Airport' },
+    operator: 'Airport Shuttle',
   },
   {
     type: 'flight',
@@ -29,29 +53,5 @@ export const EXAMPLE_TICKETS = [
     number: 'ICN 35780',
     platform: '1',
     seat: '13F',
-  },
-  {
-    type: 'bus',
-    from: { name: 'Bologna San Ruffillo' },
-    to: { name: 'Bologna Guglielmo Marconi Airport' },
-    operator: 'Airport Shuttle',
-  },
-  {
-    type: 'flight',
-    from: { name: 'Bologna Guglielmo Marconi Airport', code: 'BLQ' },
-    to: { name: 'Paris CDG Airport', code: 'CDG' },
-    flightNumber: 'AF1229',
-    gate: '22',
-    seat: '10A',
-    baggage: 'self-check-in',
-  },
-  {
-    type: 'flight',
-    from: { name: 'Paris CDG Airport', code: 'CDG' },
-    to: { name: "Chicago O'Hare", code: 'ORD' },
-    flightNumber: 'AF136',
-    gate: '32',
-    seat: '10A',
-    baggage: 'auto-transfer',
   },
 ];
