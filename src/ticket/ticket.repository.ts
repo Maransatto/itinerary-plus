@@ -19,7 +19,7 @@ export class TicketRepository {
 
   /**
    * Create a ticket of the appropriate type based on the ticket data
-   * TODO: we should not use any, replace it with the proper DTO
+   * // TODO: we should not use any, replace it with the proper DTO
    */
   async createTicket(ticketData: any, fromPlace: Place, toPlace: Place): Promise<Ticket> {
     let ticket: Ticket;
