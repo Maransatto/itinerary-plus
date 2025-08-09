@@ -58,8 +58,8 @@ export class TicketService {
       const fromPlace = await this.placeService.findOrCreatePlace(ticketData.from);
       const toPlace = await this.placeService.findOrCreatePlace(ticketData.to);
 
-      // Create the ticket
-      const ticket = await this.ticketRepository.createTicket(ticketData, fromPlace, toPlace);
+      // Find or create the ticket (avoiding duplicates)
+      const ticket = await this.ticketRepository.findOrCreateTicket(ticketData, fromPlace, toPlace);
 
       this.logger.log(`Created ${ticket.type} ticket with ID: ${ticket.id}`);
       return ticket;
@@ -97,7 +97,7 @@ export class TicketService {
           throw new Error(`Unable to find places for ticket: ${ticketData.from.name} -> ${ticketData.to.name}`);
         }
 
-        const ticket = await this.ticketRepository.createTicket(ticketData, fromPlace, toPlace);
+        const ticket = await this.ticketRepository.findOrCreateTicket(ticketData, fromPlace, toPlace);
         tickets.push(ticket);
       }
 

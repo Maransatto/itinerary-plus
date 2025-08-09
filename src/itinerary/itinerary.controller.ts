@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Header,
+  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -86,11 +87,12 @@ export class ItineraryController {
   })
   async createItinerary(
     @Body() createItineraryDto: CreateItineraryDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<Itinerary> {
     this.logger.debug(`Creating itinerary with ${createItineraryDto.tickets.length} tickets`);
 
     try {
-      const result = await this.itineraryService.createItinerary(createItineraryDto);
+      const result = await this.itineraryService.createItinerary(createItineraryDto, idempotencyKey);
 
       if (!result.isValid) {
         this.logger.warn(`Itinerary creation failed: ${result.errors.join(', ')}`);

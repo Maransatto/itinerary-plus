@@ -1,10 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ItineraryRepository } from './itinerary.repository';
-import { ItineraryItemRepository } from './itinerary-item.repository';
-import { TicketService, TicketCreationData } from '../ticket/ticket.service';
-import { ItinerarySortingService, SortingResult } from './itinerary-sorting.service';
-import { Itinerary } from './entities/itinerary.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as crypto from 'crypto';
+import { Repository } from 'typeorm';
+import { TicketCreationData, TicketService } from '../ticket/ticket.service';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
+import { IdempotencyKey } from './entities/idempotency.entity';
+import { Itinerary } from './entities/itinerary.entity';
+import { ItineraryItemRepository } from './itinerary-item.repository';
+import { ItinerarySortingService, SortingResult } from './itinerary-sorting.service';
+import { ItineraryRepository } from './itinerary.repository';
 
 export interface ItineraryCreationResult {
   itinerary: Itinerary | null;
@@ -22,15 +26,38 @@ export class ItineraryService {
     private readonly itineraryItemRepository: ItineraryItemRepository,
     private readonly ticketService: TicketService,
     private readonly sortingService: ItinerarySortingService,
+    @InjectRepository(IdempotencyKey)
+    private readonly idempotencyRepository: Repository<IdempotencyKey>,
   ) {}
 
   /**
    * Create a complete itinerary from unsorted ticket data
    */
-  async createItinerary(createItineraryDto: CreateItineraryDto): Promise<ItineraryCreationResult> {
+  async createItinerary(createItineraryDto: CreateItineraryDto, idempotencyKey?: string): Promise<ItineraryCreationResult> {
     const { tickets: ticketsData, render } = createItineraryDto;
     
-    this.logger.debug(`Creating itinerary from ${ticketsData.length} tickets`);
+    this.logger.debug(`Creating itinerary from ${ticketsData.length} tickets${idempotencyKey ? ` with idempotency key: ${idempotencyKey}` : ''}`);
+
+    // Check for idempotency key
+    if (idempotencyKey) {
+      const existingKey = await this.idempotencyRepository.findOne({
+        where: { key: idempotencyKey }
+      });
+
+      if (existingKey) {
+        this.logger.debug(`Found existing itinerary for idempotency key: ${idempotencyKey}`);
+        const existingItinerary = await this.findItineraryById(existingKey.itineraryId);
+        
+        if (existingItinerary) {
+          return {
+            itinerary: existingItinerary,
+            isValid: true,
+            errors: [],
+            warnings: ['Returned existing itinerary based on idempotency key'],
+          };
+        }
+      }
+    }
 
     const result: ItineraryCreationResult = {
       itinerary: null,
@@ -86,6 +113,24 @@ export class ItineraryService {
       result.itinerary = itinerary;
       result.isValid = true;
       result.warnings = sortingResult.warnings;
+
+      // Save idempotency key if provided
+      if (idempotencyKey) {
+        const contentHash = this.generateContentHash(createItineraryDto);
+        const idempotencyRecord = new IdempotencyKey({
+          key: idempotencyKey,
+          itineraryId: itinerary.id!,
+          contentHash,
+        });
+        
+        try {
+          await this.idempotencyRepository.save(idempotencyRecord);
+          this.logger.debug(`Saved idempotency key: ${idempotencyKey}`);
+        } catch (error) {
+          this.logger.warn(`Failed to save idempotency key: ${error.message}`);
+          // Don't fail the request if idempotency key save fails
+        }
+      }
 
       this.logger.log(`Successfully created itinerary ${itinerary.id} with ${items.length} items`);
       return result;
@@ -282,5 +327,13 @@ export class ItineraryService {
       averageStops: 0, // Would require complex query
       mostCommonRoutes: [], // Would require grouping analysis
     };
+  }
+
+  /**
+   * Generate a hash of the request content for idempotency validation
+   */
+  private generateContentHash(dto: CreateItineraryDto): string {
+    const content = JSON.stringify(dto, Object.keys(dto).sort());
+    return crypto.createHash('sha256').update(content).digest('hex');
   }
 } 
