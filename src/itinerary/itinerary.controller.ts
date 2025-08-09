@@ -10,6 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiHeader,
   ApiOperation,
   ApiParam,
@@ -19,8 +20,24 @@ import {
 import type { Response } from 'express';
 import { CreateItineraryDto, RenderType } from './dto/create-itinerary.dto';
 import { Itinerary } from './entities/itinerary.entity';
+import {
+  CreateTrainTicketDto,
+  CreateFlightTicketDto,
+  CreateTramTicketDto,
+  CreateBusTicketDto,
+  CreateBoatTicketDto,
+  CreateTaxiTicketDto,
+} from '../ticket/dto';
 
 @ApiTags('Itineraries')
+@ApiExtraModels(
+  CreateTrainTicketDto,
+  CreateFlightTicketDto,
+  CreateTramTicketDto,
+  CreateBusTicketDto,
+  CreateBoatTicketDto,
+  CreateTaxiTicketDto,
+)
 @Controller('v1/itineraries')
 export class ItineraryController {
   @Post()

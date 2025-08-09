@@ -7,8 +7,15 @@ import {
   ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateTrainTicketDto } from '../../ticket/dto/create-train-ticket.dto';
-import { CreateFlightTicketDto } from '../../ticket/dto/create-flight-ticket.dto';
+import {
+  CreateTrainTicketDto,
+  CreateFlightTicketDto,
+  CreateTramTicketDto,
+  CreateBusTicketDto,
+  CreateBoatTicketDto,
+  CreateTaxiTicketDto,
+} from '../../ticket/dto';
+import { EXAMPLE_TICKETS } from './create-itinerary.constants';
 
 export enum RenderType {
   JSON = 'json',
@@ -23,22 +30,38 @@ export class CreateItineraryDto {
     oneOf: [
       { $ref: '#/components/schemas/CreateTrainTicketDto' },
       { $ref: '#/components/schemas/CreateFlightTicketDto' },
+      { $ref: '#/components/schemas/CreateTramTicketDto' },
+      { $ref: '#/components/schemas/CreateBusTicketDto' },
+      { $ref: '#/components/schemas/CreateBoatTicketDto' },
+      { $ref: '#/components/schemas/CreateTaxiTicketDto' },
     ],
+    example: EXAMPLE_TICKETS,
   })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => Object, {
-    // keepDiscriminatorProperty: true,
+    keepDiscriminatorProperty: true,
     discriminator: {
       property: 'type',
       subTypes: [
         { value: CreateTrainTicketDto, name: 'train' },
         { value: CreateFlightTicketDto, name: 'flight' },
+        { value: CreateTramTicketDto, name: 'tram' },
+        { value: CreateBusTicketDto, name: 'bus' },
+        { value: CreateBoatTicketDto, name: 'boat' },
+        { value: CreateTaxiTicketDto, name: 'taxi' },
       ],
     },
   })
-  tickets: (CreateTrainTicketDto | CreateFlightTicketDto)[];
+  tickets: (
+    | CreateTrainTicketDto
+    | CreateFlightTicketDto
+    | CreateTramTicketDto
+    | CreateBusTicketDto
+    | CreateBoatTicketDto
+    | CreateTaxiTicketDto
+  )[];
 
   @ApiProperty({
     description: 'Controls whether a human-readable output is included',
