@@ -216,27 +216,27 @@ export class TicketService {
   }
 
   /**
-   * Create a map for efficient place lookup
+   * Create a map for efficient place lookup by name (since names are now unique)
    */
   private createPlaceMap(places: Place[]): Map<string, Place> {
     const map = new Map<string, Place>();
     
     places.forEach(place => {
-      const key = `${place.name}|${place.code || ''}`;
-      map.set(key, place);
+      // Since place names are unique, we can use just the name as the key
+      map.set(place.name, place);
     });
 
     return map;
   }
 
   /**
-   * Find a place in the map using name and code
+   * Find a place in the map using name (code is ignored since names are unique)
    */
   private findPlaceInMap(
     placeMap: Map<string, Place>, 
     placeData: { name: string; code?: string }
   ): Place | undefined {
-    const key = `${placeData.name}|${placeData.code || ''}`;
-    return placeMap.get(key);
+    // Look up by name only since names are unique
+    return placeMap.get(placeData.name);
   }
 } 
