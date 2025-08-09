@@ -192,25 +192,25 @@ export class ItinerarySortingService {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Count places with different degree patterns
-    let startCandidates = 0; // outDegree > inDegree
-    let endCandidates = 0;   // inDegree > outDegree
-    let isolatedPlaces = 0;  // both degrees = 0
-    let balancedPlaces = 0;  // inDegree = outDegree
+    // Collect places with different degree patterns
+    const startCandidateNames: string[] = []; // outDegree > inDegree
+    const endCandidateNames: string[] = [];   // inDegree > outDegree
+    const isolatedPlaceNames: string[] = [];  // both degrees = 0
+    const balancedPlaceNames: string[] = [];  // inDegree = outDegree
 
     graph.nodes.forEach((place, placeId) => {
       const inDeg = graph.inDegree.get(placeId) || 0;
       const outDeg = graph.outDegree.get(placeId) || 0;
 
       if (inDeg === 0 && outDeg === 0) {
-        isolatedPlaces++;
+        isolatedPlaceNames.push(place.name);
         errors.push(`Place '${place.name}' is isolated (no connections)`);
       } else if (outDeg > inDeg) {
-        startCandidates++;
+        startCandidateNames.push(`${place.name} (out:${outDeg}, in:${inDeg})`);
       } else if (inDeg > outDeg) {
-        endCandidates++;
+        endCandidateNames.push(`${place.name} (in:${inDeg}, out:${outDeg})`);
       } else {
-        balancedPlaces++;
+        balancedPlaceNames.push(`${place.name} (${inDeg}/${outDeg})`);
       }
 
       // Check for excessive branching
@@ -223,16 +223,16 @@ export class ItinerarySortingService {
     });
 
     // For a valid linear path, we should have exactly 1 start and 1 end
-    if (startCandidates === 0) {
+    if (startCandidateNames.length === 0) {
       errors.push('No starting place found (all places have incoming connections)');
-    } else if (startCandidates > 1) {
-      errors.push(`Multiple possible starting places found (${startCandidates}). Route may have branches.`);
+    } else if (startCandidateNames.length > 1) {
+      errors.push(`Multiple possible starting places found: ${startCandidateNames.join(', ')}. Route may have branches.`);
     }
 
-    if (endCandidates === 0) {
+    if (endCandidateNames.length === 0) {
       errors.push('No ending place found (all places have outgoing connections)');
-    } else if (endCandidates > 1) {
-      errors.push(`Multiple possible ending places found (${endCandidates}). Route may have branches.`);
+    } else if (endCandidateNames.length > 1) {
+      errors.push(`Multiple possible ending places found: ${endCandidateNames.join(', ')}. Route may have branches.`);
     }
 
     return { isValid: errors.length === 0, errors, warnings };
