@@ -48,6 +48,14 @@
       "line": "S5"
     },
     {
+      "type": "taxi",
+      "from": { "name": "Venice Airport", "code": "VCE" },
+      "to": { "name": "Gara Venetia Santa Lucia" },
+      "company": "Venice Airport Taxi",
+      "driver": "Marco",
+      "vehicleId": "VE-TX-456"
+    },
+    {
       "type": "train",
       "from": { "name": "Gara Venetia Santa Lucia" },
       "to": { "name": "Bologna San Ruffillo" },
