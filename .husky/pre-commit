@@ -1,1 +1,7 @@
 npx lint-staged
+
+# Run test coverage check for staged TypeScript files
+if git diff --cached --name-only --diff-filter=ACM | grep -q "\.ts$"; then
+  echo "🧪 Running test coverage validation..."
+  npm run test:cov:strict
+fi
