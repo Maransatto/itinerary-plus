@@ -40,8 +40,6 @@ export class ItinerarySortingService {
    * Main method to sort an array of unordered tickets into a valid itinerary
    */
   async sortTickets(tickets: Ticket[]): Promise<SortingResult> {
-    this.logger.debug(`Sorting ${tickets.length} tickets into itinerary`);
-
     const result: SortingResult = {
       sortedTickets: [],
       startPlace: null,
@@ -58,6 +56,8 @@ export class ItinerarySortingService {
         result.errors = basicValidation.errors;
         return result;
       }
+
+      this.logger.debug(`Sorting ${tickets.length} tickets into itinerary`);
 
       // Step 2: Build route graph
       const graph = this.buildRouteGraph(tickets);
@@ -136,11 +136,7 @@ export class ItinerarySortingService {
 
     if (!tickets || tickets.length === 0) {
       errors.push('No tickets provided for sorting');
-    }
-
-    if (tickets.length === 1) {
-      // Single ticket is always valid
-      return { isValid: true, errors: [] };
+      return { isValid: false, errors };
     }
 
     // Check that all tickets have valid from/to places
@@ -259,6 +255,24 @@ export class ItinerarySortingService {
         );
       }
     });
+
+    // Check for circular route pattern (all places have inDegree = outDegree = 1)
+    if (
+      startCandidateNames.length === 0 &&
+      endCandidateNames.length === 0 &&
+      balancedPlaceNames.length > 0
+    ) {
+      const allBalanced = Array.from(graph.nodes.values()).every((place) => {
+        const inDeg = graph.inDegree.get(place.id || '') || 0;
+        const outDeg = graph.outDegree.get(place.id || '') || 0;
+        return inDeg === 1 && outDeg === 1;
+      });
+
+      if (allBalanced) {
+        errors.push('Circular route detected');
+        return { isValid: false, errors, warnings };
+      }
+    }
 
     // For a valid linear path, we should have exactly 1 start and 1 end
     if (startCandidateNames.length === 0) {
