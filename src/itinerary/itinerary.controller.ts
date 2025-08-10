@@ -52,6 +52,7 @@ export class ItineraryController {
   private readonly logger = new Logger(ItineraryController.name);
 
   constructor(private readonly itineraryService: ItineraryService) {}
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({

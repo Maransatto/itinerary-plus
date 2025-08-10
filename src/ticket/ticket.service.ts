@@ -48,13 +48,24 @@ export class TicketService {
       const toPlace = await this.placeService.findOrCreatePlace(ticketData.to);
 
       // Find or create the ticket (avoiding duplicates)
-      const ticket = await this.ticketRepository.findOrCreateTicket(
-        ticketData,
-        fromPlace,
-        toPlace,
-      );
+      const { ticket, wasFound } =
+        await this.ticketRepository.findOrCreateTicket(
+          ticketData,
+          fromPlace,
+          toPlace,
+        );
 
-      this.logger.log(`Created ${ticket.type} ticket with ID: ${ticket.id}`);
+      // Log whether we found an existing ticket or created a new one
+      if (wasFound) {
+        this.logger.log(
+          `Found existing ${ticket.type} ticket with ID: ${ticket.id} (avoided duplicate)`,
+        );
+      } else {
+        this.logger.log(
+          `Created new ${ticket.type} ticket with ID: ${ticket.id}`,
+        );
+      }
+
       return ticket;
     } catch (error) {
       this.logger.error(`Failed to create ticket: ${ticketData.type}`, error);
@@ -96,11 +107,20 @@ export class TicketService {
           );
         }
 
-        const ticket = await this.ticketRepository.findOrCreateTicket(
-          ticketData,
-          fromPlace,
-          toPlace,
-        );
+        const { ticket, wasFound } =
+          await this.ticketRepository.findOrCreateTicket(
+            ticketData,
+            fromPlace,
+            toPlace,
+          );
+
+        // Log duplicate detection for multiple tickets (debug level)
+        if (wasFound) {
+          this.logger.debug(
+            `Found existing ${ticket.type} ticket with ID: ${ticket.id} (avoided duplicate)`,
+          );
+        }
+
         tickets.push(ticket);
       }
 

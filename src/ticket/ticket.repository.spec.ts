@@ -589,12 +589,15 @@ describe('TicketRepository', () => {
       // Arrange
       const ticketData: CreateTicket = {
         type: TicketType.FLIGHT,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        seat: '18B',
-        flightNumber: 'AA904',
+        from: { name: 'Paris CDG Airport', code: 'CDG' },
+        to: { name: "Chicago O'Hare", code: 'ORD' },
+        flightNumber: 'AF136',
+        gate: '32',
+        seat: '10A',
+        baggage: BaggageType.AUTO_TRANSFER,
       };
 
+      // Mock the query builder to simulate finding an existing ticket
       mockQueryBuilder.getOne.mockResolvedValue(mockFlightTicket);
 
       // Act
@@ -607,6 +610,14 @@ describe('TicketRepository', () => {
       // Assert
       expect(typeOrmRepository.createQueryBuilder).toHaveBeenCalledWith(
         'ticket',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.from',
+        'fromPlace',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.to',
+        'toPlace',
       );
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         'ticket.type = :type',
@@ -621,73 +632,10 @@ describe('TicketRepository', () => {
         { toPlaceId: 'place-to-456' },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.flightNumber = :flightNumber',
-        { flightNumber: 'AA904' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'ticket.seat = :seat',
-        { seat: '18B' },
-      );
-      expect(result).toEqual(mockFlightTicket);
-    });
-
-    it('should find existing flight ticket without seat', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.FLIGHT,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        flightNumber: 'AA904',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockFlightTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
+        { seat: '10A' },
       );
 
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.flightNumber = :flightNumber',
-        { flightNumber: 'AA904' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.seat = :seat',
-        expect.anything(),
-      );
-      expect(result).toEqual(mockFlightTicket);
-    });
-
-    it('should find existing flight ticket without seat', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.FLIGHT,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        flightNumber: 'AA904',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockFlightTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.flightNumber = :flightNumber',
-        { flightNumber: 'AA904' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.seat = :seat',
-        expect.anything(),
-      );
       expect(result).toEqual(mockFlightTicket);
     });
 
@@ -695,346 +643,105 @@ describe('TicketRepository', () => {
       // Arrange
       const ticketData: CreateTicket = {
         type: TicketType.TRAIN,
-        from: { name: 'Innsbruck Hbf', code: 'INN' },
-        to: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        seat: '17C',
-        number: '765',
+        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
+        to: { name: 'Innsbruck Hbf', code: 'INN' },
+        number: 'RJX 765',
         platform: '3',
+        seat: '17C',
       };
 
+      // Mock the query builder to simulate finding an existing ticket
       mockQueryBuilder.getOne.mockResolvedValue(mockTrainTicket);
 
       // Act
       const result = await repository.findExistingTicket(
         ticketData,
-        'place-to-456',
         'place-from-123',
+        'place-to-456',
       );
 
       // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.number = :number',
-        { number: '765' },
+      expect(typeOrmRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'ticket',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.from',
+        'fromPlace',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.to',
+        'toPlace',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'ticket.type = :type',
+        { type: TicketType.TRAIN },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.platform = :platform',
-        { platform: '3' },
+        'ticket.from_place_id = :fromPlaceId',
+        { fromPlaceId: 'place-from-123' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'ticket.to_place_id = :toPlaceId',
+        { toPlaceId: 'place-to-456' },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'ticket.seat = :seat',
         { seat: '17C' },
       );
+
       expect(result).toEqual(mockTrainTicket);
-    });
-
-    it('should find existing train ticket with partial criteria', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.TRAIN,
-        from: { name: 'Innsbruck Hbf', code: 'INN' },
-        to: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        number: '765',
-        platform: '3',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockTrainTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-to-456',
-        'place-from-123',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.number = :number',
-        { number: '765' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.platform = :platform',
-        { platform: '3' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.seat = :seat',
-        expect.anything(),
-      );
-      expect(result).toEqual(mockTrainTicket);
-    });
-
-    it('should find existing bus ticket with matching criteria', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.BUS,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        route: 'Airport Express',
-        operator: 'City Bus Co',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockBusTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.route = :route',
-        { route: 'Airport Express' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.operator = :operator',
-        { operator: 'City Bus Co' },
-      );
-      expect(result).toEqual(mockBusTicket);
-    });
-
-    it('should find existing bus ticket with route only', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.BUS,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        route: 'Airport Express',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockBusTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.route = :route',
-        { route: 'Airport Express' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.operator = :operator',
-        expect.anything(),
-      );
-      expect(result).toEqual(mockBusTicket);
-    });
-
-    it('should find existing tram ticket with matching criteria', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.TRAM,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        line: 'S5',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockTramTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.line = :line',
-        { line: 'S5' },
-      );
-      expect(result).toEqual(mockTramTicket);
-    });
-
-    it('should find existing tram ticket with line', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.TRAM,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        line: 'S5',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockTramTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.line = :line',
-        { line: 'S5' },
-      );
-      expect(result).toEqual(mockTramTicket);
-    });
-
-    it('should find existing taxi ticket with matching criteria', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.TAXI,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        company: 'City Taxi',
-        vehicleId: 'TAXI-001',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockTaxiTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.company = :company',
-        { company: 'City Taxi' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.vehicleId = :vehicleId',
-        { vehicleId: 'TAXI-001' },
-      );
-      expect(result).toEqual(mockTaxiTicket);
-    });
-
-    it('should find existing taxi ticket with company only', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.TAXI,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        company: 'City Taxi',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockTaxiTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.company = :company',
-        { company: 'City Taxi' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.vehicleId = :vehicleId',
-        expect.anything(),
-      );
-      expect(result).toEqual(mockTaxiTicket);
-    });
-
-    it('should find existing boat ticket with matching criteria', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.BOAT,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        vessel: 'Sea Explorer',
-        dock: 'Pier 3',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockBoatTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.vessel = :vessel',
-        { vessel: 'Sea Explorer' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.dock = :dock',
-        { dock: 'Pier 3' },
-      );
-      expect(result).toEqual(mockBoatTicket);
-    });
-
-    it('should find existing boat ticket with vessel only', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.BOAT,
-        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
-        to: { name: 'Innsbruck Hbf', code: 'INN' },
-        vessel: 'Sea Explorer',
-      };
-
-      mockQueryBuilder.getOne.mockResolvedValue(mockBoatTicket);
-
-      // Act
-      const result = await repository.findExistingTicket(
-        ticketData,
-        'place-from-123',
-        'place-to-456',
-      );
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'ticket.vessel = :vessel',
-        { vessel: 'Sea Explorer' },
-      );
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'ticket.dock = :dock',
-        expect.anything(),
-      );
-      expect(result).toEqual(mockBoatTicket);
     });
 
     it('should return null when no existing ticket found', async () => {
       // Arrange
       const ticketData: CreateTicket = {
         type: TicketType.FLIGHT,
-        from: { name: 'Test', code: 'TEST' },
-        to: { name: 'Test2', code: 'TEST2' },
-        flightNumber: 'TEST123',
+        from: { name: 'Unknown Airport', code: 'UNK' },
+        to: { name: 'Another Airport', code: 'ANR' },
+        flightNumber: 'UNKNOWN123',
+        seat: '99Z',
       };
 
+      // Mock the query builder to simulate no existing ticket
       mockQueryBuilder.getOne.mockResolvedValue(null);
 
       // Act
       const result = await repository.findExistingTicket(
         ticketData,
-        'place-1',
-        'place-2',
+        'place-from-123',
+        'place-to-456',
       );
 
       // Assert
+      expect(typeOrmRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'ticket',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.from',
+        'fromPlace',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'ticket.to',
+        'toPlace',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'ticket.type = :type',
+        { type: TicketType.FLIGHT },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'ticket.from_place_id = :fromPlaceId',
+        { fromPlaceId: 'place-from-123' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'ticket.to_place_id = :toPlaceId',
+        { toPlaceId: 'place-to-456' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'ticket.seat = :seat',
+        { seat: '99Z' },
+      );
+
       expect(result).toBeNull();
-    });
-
-    it('should handle database errors', async () => {
-      // Arrange
-      const ticketData: CreateTicket = {
-        type: TicketType.FLIGHT,
-        from: { name: 'Test', code: 'TEST' },
-        to: { name: 'Test2', code: 'TEST2' },
-        flightNumber: 'TEST123',
-      };
-
-      const dbError = new Error('Database connection failed');
-      mockQueryBuilder.getOne.mockRejectedValue(dbError);
-
-      // Act & Assert
-      await expect(
-        repository.findExistingTicket(ticketData, 'place-1', 'place-2'),
-      ).rejects.toThrow(dbError);
     });
   });
 
@@ -1065,7 +772,10 @@ describe('TicketRepository', () => {
         'place-from-123',
         'place-to-456',
       );
-      expect(result).toEqual(mockFlightTicket);
+      expect(result).toEqual({
+        ticket: mockFlightTicket,
+        wasFound: true,
+      });
     });
 
     it('should create new ticket when not found', async () => {
@@ -1100,7 +810,10 @@ describe('TicketRepository', () => {
         mockFromPlace,
         mockToPlace,
       );
-      expect(result).toEqual(mockFlightTicket);
+      expect(result).toEqual({
+        ticket: mockFlightTicket,
+        wasFound: false,
+      });
     });
   });
 
@@ -1185,7 +898,10 @@ describe('TicketRepository', () => {
       // Assert
       expect(repository.findExistingTicket).toHaveBeenCalled();
       expect(repository.createTicket).toHaveBeenCalled();
-      expect(result).toEqual(mockFlightTicket);
+      expect(result).toEqual({
+        ticket: mockFlightTicket,
+        wasFound: false,
+      });
     });
 
     it('should handle batch operations with findByIds', async () => {

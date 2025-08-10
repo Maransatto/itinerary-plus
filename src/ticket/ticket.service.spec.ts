@@ -121,7 +121,10 @@ describe('TicketService', () => {
       placeService.findOrCreatePlace
         .mockResolvedValueOnce(mockFromPlace)
         .mockResolvedValueOnce(mockToPlace);
-      ticketRepository.findOrCreateTicket.mockResolvedValue(mockFlightTicket);
+      ticketRepository.findOrCreateTicket.mockResolvedValue({
+        ticket: mockFlightTicket,
+        wasFound: false,
+      });
 
       // Act
       const result = await service.createTicket(ticketData);
@@ -160,7 +163,10 @@ describe('TicketService', () => {
       placeService.findOrCreatePlace
         .mockResolvedValueOnce(mockToPlace)
         .mockResolvedValueOnce(mockFromPlace);
-      ticketRepository.findOrCreateTicket.mockResolvedValue(mockTrainTicket);
+      ticketRepository.findOrCreateTicket.mockResolvedValue({
+        ticket: mockTrainTicket,
+        wasFound: false,
+      });
 
       // Act
       const result = await service.createTicket(ticketData);
@@ -365,8 +371,14 @@ describe('TicketService', () => {
       ]);
       placeService.findOrCreateMultiplePlaces.mockResolvedValue(mockPlaces);
       ticketRepository.findOrCreateTicket
-        .mockResolvedValueOnce(mockFlightTicket)
-        .mockResolvedValueOnce(mockTrainTicket);
+        .mockResolvedValueOnce({
+          ticket: mockFlightTicket,
+          wasFound: false,
+        })
+        .mockResolvedValueOnce({
+          ticket: mockTrainTicket,
+          wasFound: false,
+        });
 
       // Act
       const result = await service.createMultipleTickets(ticketsData);
@@ -630,6 +642,76 @@ describe('TicketService', () => {
     });
   });
 
+  describe('Duplicate Detection', () => {
+    it('should find existing ticket when all attributes match', async () => {
+      // Arrange
+      const ticketData: CreateTicket = {
+        type: TicketType.FLIGHT,
+        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
+        to: { name: 'Innsbruck Hbf', code: 'INN' },
+        seat: '18B',
+        notes: 'Self-check-in luggage at counter',
+        airline: 'American Airlines',
+        flightNumber: 'AA904',
+        gate: '10',
+        baggage: BaggageType.SELF_CHECK_IN,
+      };
+
+      placeService.findOrCreatePlace
+        .mockResolvedValueOnce(mockFromPlace)
+        .mockResolvedValueOnce(mockToPlace);
+      ticketRepository.findOrCreateTicket.mockResolvedValue({
+        ticket: mockFlightTicket,
+        wasFound: true, // Simulate finding existing ticket
+      });
+
+      // Act
+      const result = await service.createTicket(ticketData);
+
+      // Assert
+      expect(ticketRepository.findOrCreateTicket).toHaveBeenCalledWith(
+        ticketData,
+        mockFromPlace,
+        mockToPlace,
+      );
+      expect(result).toEqual(mockFlightTicket);
+    });
+
+    it('should create new ticket when attributes differ', async () => {
+      // Arrange
+      const ticketData: CreateTicket = {
+        type: TicketType.FLIGHT,
+        from: { name: 'St. Anton am Arlberg Bahnhof', code: 'STANT' },
+        to: { name: 'Innsbruck Hbf', code: 'INN' },
+        seat: '18B',
+        notes: 'Self-check-in luggage at counter',
+        airline: 'American Airlines',
+        flightNumber: 'AA904',
+        gate: '10',
+        baggage: BaggageType.SELF_CHECK_IN,
+      };
+
+      placeService.findOrCreatePlace
+        .mockResolvedValueOnce(mockFromPlace)
+        .mockResolvedValueOnce(mockToPlace);
+      ticketRepository.findOrCreateTicket.mockResolvedValue({
+        ticket: mockFlightTicket,
+        wasFound: false, // Simulate creating new ticket
+      });
+
+      // Act
+      const result = await service.createTicket(ticketData);
+
+      // Assert
+      expect(ticketRepository.findOrCreateTicket).toHaveBeenCalledWith(
+        ticketData,
+        mockFromPlace,
+        mockToPlace,
+      );
+      expect(result).toEqual(mockFlightTicket);
+    });
+  });
+
   describe('Integration scenarios', () => {
     it('should handle complex multiple ticket creation scenario', async () => {
       // Arrange
@@ -670,9 +752,18 @@ describe('TicketService', () => {
       ]);
       placeService.findOrCreateMultiplePlaces.mockResolvedValue(mockPlaces);
       ticketRepository.findOrCreateTicket
-        .mockResolvedValueOnce(mockFlightTicket)
-        .mockResolvedValueOnce(mockTrainTicket)
-        .mockResolvedValueOnce(mockFlightTicket);
+        .mockResolvedValueOnce({
+          ticket: mockFlightTicket,
+          wasFound: false,
+        })
+        .mockResolvedValueOnce({
+          ticket: mockTrainTicket,
+          wasFound: false,
+        })
+        .mockResolvedValueOnce({
+          ticket: mockFlightTicket,
+          wasFound: false,
+        });
 
       // Act
       const result = await service.createMultipleTickets(ticketsData);

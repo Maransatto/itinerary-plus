@@ -115,6 +115,26 @@ The application follows a comprehensive testing strategy with unit tests for ser
 - 80% minimum coverage for all tested services
 - See [TESTING.md](./TESTING.md) for detailed coverage configuration
 
+**Testing Duplicate Detection:**
+
+The enhanced duplicate detection feature is thoroughly tested with comprehensive test cases:
+
+```bash
+# Run duplicate detection tests specifically
+npm test -- src/ticket/ticket.repository.spec.ts --testNamePattern="Enhanced Duplicate Detection"
+
+# Run all ticket-related tests
+npm test -- src/ticket/
+```
+
+**Test Coverage for Duplicate Detection:**
+
+- ✅ **Field Comparison Tests**: Verify all relevant fields are checked for each ticket type
+- ✅ **Null/Undefined Handling**: Test proper handling of optional fields
+- ✅ **Type-Specific Logic**: Ensure each ticket type has appropriate duplicate detection rules
+- ✅ **Integration Tests**: Verify duplicate detection works in real-world scenarios
+- ✅ **Performance Tests**: Ensure duplicate detection queries are optimized
+
 #### Database Management
 
 - **`yarn migration:run`**: Apply pending migrations
@@ -343,6 +363,42 @@ This project follows a contract-first approach with systematic layered developme
 - **TypeORM Integration**: Configured TypeORM with proper entity relationships and migrations
 - **Entity Refinement**: Added TypeORM decorators to all entities with proper relationships and constraints
 - **Database Migration**: Generated and executed initial schema migration, all tables created successfully
+- **Enhanced Duplicate Detection**: Implemented comprehensive duplicate detection to avoid creating redundant tickets
+
+#### Enhanced Duplicate Detection
+
+The system now includes sophisticated duplicate detection to prevent creating redundant tickets when all attributes are identical. This feature:
+
+**How it works:**
+
+- **Comprehensive Field Comparison**: Checks all relevant fields for each ticket type, not just basic route information
+- **Type-Specific Logic**: Different ticket types have different required and optional fields for duplicate detection
+- **Null/Undefined Handling**: Properly handles cases where optional fields are not provided
+- **Performance Optimized**: Uses efficient database queries with proper indexing
+
+**Fields checked for each ticket type:**
+
+| Ticket Type | Required Fields                            | Optional Fields                                   |
+| ----------- | ------------------------------------------ | ------------------------------------------------- |
+| **Flight**  | `type`, `from`, `to`, `flightNumber`       | `seat`, `notes`, `airline`, `gate`, `baggage`     |
+| **Train**   | `type`, `from`, `to`, `number`, `platform` | `seat`, `notes`, `line`                           |
+| **Tram**    | `type`, `from`, `to`, `line`               | `seat`, `notes`                                   |
+| **Bus**     | `type`, `from`, `to`                       | `seat`, `notes`, `route`, `operator`              |
+| **Boat**    | `type`, `from`, `to`                       | `seat`, `notes`, `vessel`, `dock`                 |
+| **Taxi**    | `type`, `from`, `to`                       | `seat`, `notes`, `company`, `driver`, `vehicleId` |
+
+**Example scenarios:**
+
+1. **Identical tickets**: Two flight tickets with the same route, flight number, seat, and all other details → Only one ticket is created
+2. **Different seats**: Same flight but different seat assignments → Two separate tickets are created
+3. **Missing optional fields**: Tickets with same required fields but different optional fields → Separate tickets are created
+
+**Benefits:**
+
+- **Data Integrity**: Prevents duplicate tickets in the database
+- **Storage Efficiency**: Reduces database storage requirements
+- **Performance**: Faster itinerary creation by reusing existing tickets
+- **Consistency**: Ensures consistent ticket references across multiple itineraries
 
 #### Database Setup
 

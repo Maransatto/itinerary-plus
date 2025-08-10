@@ -29,32 +29,36 @@ export class TicketRepository {
     let ticket: Ticket;
 
     switch (ticketData.type) {
-      case TicketType.FLIGHT:
+      case TicketType.FLIGHT: {
+        const flightData = ticketData;
         ticket = new FlightTicket({
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
           from: fromPlace,
           to: toPlace,
-          airline: ticketData.airline,
-          flightNumber: ticketData.flightNumber,
-          gate: ticketData.gate,
-          baggage: ticketData.baggage,
+          airline: flightData.airline,
+          flightNumber: flightData.flightNumber,
+          gate: flightData.gate,
+          baggage: flightData.baggage,
         });
         break;
+      }
 
-      case TicketType.TRAIN:
+      case TicketType.TRAIN: {
+        const trainData = ticketData;
         ticket = new TrainTicket({
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
           from: fromPlace,
           to: toPlace,
-          line: ticketData.line,
-          number: ticketData.number,
-          platform: ticketData.platform,
+          line: trainData.line,
+          number: trainData.number,
+          platform: trainData.platform,
         });
         break;
+      }
 
       case TicketType.BUS:
         ticket = new BusTicket({
@@ -68,16 +72,18 @@ export class TicketRepository {
         });
         break;
 
-      case TicketType.TRAM:
+      case TicketType.TRAM: {
+        const tramData = ticketData;
         ticket = new TramTicket({
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
           from: fromPlace,
           to: toPlace,
-          line: ticketData.line,
+          line: tramData.line,
         });
         break;
+      }
 
       case TicketType.BOAT:
         ticket = new BoatTicket({
@@ -109,7 +115,8 @@ export class TicketRepository {
         );
     }
 
-    return this.ticketRepository.save(ticket);
+    const savedTicket = await this.ticketRepository.save(ticket);
+    return savedTicket;
   }
 
   /**
@@ -181,102 +188,36 @@ export class TicketRepository {
 
   /**
    * Find existing ticket with matching content to avoid duplicates
+   * Simple and reliable implementation
    */
   async findExistingTicket(
     ticketData: CreateTicket,
     fromPlaceId: string,
     toPlaceId: string,
   ): Promise<Ticket | null> {
-    const query = this.ticketRepository
+    // Simple query to find existing tickets with same route and seat
+    const existingTicket = await this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.from', 'fromPlace')
       .leftJoinAndSelect('ticket.to', 'toPlace')
       .where('ticket.type = :type', { type: ticketData.type })
       .andWhere('ticket.from_place_id = :fromPlaceId', { fromPlaceId })
-      .andWhere('ticket.to_place_id = :toPlaceId', { toPlaceId });
+      .andWhere('ticket.to_place_id = :toPlaceId', { toPlaceId })
+      .andWhere('ticket.seat = :seat', { seat: ticketData.seat || null })
+      .getOne();
 
-    // Add type-specific matching criteria
-    switch (ticketData.type) {
-      case TicketType.FLIGHT:
-        if (ticketData.flightNumber) {
-          query.andWhere('ticket.flightNumber = :flightNumber', {
-            flightNumber: ticketData.flightNumber,
-          });
-        }
-        if (ticketData.seat) {
-          query.andWhere('ticket.seat = :seat', { seat: ticketData.seat });
-        }
-        break;
-
-      case TicketType.TRAIN:
-        if (ticketData.number) {
-          query.andWhere('ticket.number = :number', {
-            number: ticketData.number,
-          });
-        }
-        if (ticketData.platform) {
-          query.andWhere('ticket.platform = :platform', {
-            platform: ticketData.platform,
-          });
-        }
-        if (ticketData.seat) {
-          query.andWhere('ticket.seat = :seat', { seat: ticketData.seat });
-        }
-        break;
-
-      case TicketType.BUS:
-        if (ticketData.route) {
-          query.andWhere('ticket.route = :route', { route: ticketData.route });
-        }
-        if (ticketData.operator) {
-          query.andWhere('ticket.operator = :operator', {
-            operator: ticketData.operator,
-          });
-        }
-        break;
-
-      case TicketType.TRAM:
-        if (ticketData.line) {
-          query.andWhere('ticket.line = :line', { line: ticketData.line });
-        }
-        break;
-
-      case TicketType.TAXI:
-        if (ticketData.company) {
-          query.andWhere('ticket.company = :company', {
-            company: ticketData.company,
-          });
-        }
-        if (ticketData.vehicleId) {
-          query.andWhere('ticket.vehicleId = :vehicleId', {
-            vehicleId: ticketData.vehicleId,
-          });
-        }
-        break;
-
-      case TicketType.BOAT:
-        if (ticketData.vessel) {
-          query.andWhere('ticket.vessel = :vessel', {
-            vessel: ticketData.vessel,
-          });
-        }
-        if (ticketData.dock) {
-          query.andWhere('ticket.dock = :dock', { dock: ticketData.dock });
-        }
-        break;
-    }
-
-    return query.getOne();
+    return existingTicket;
   }
 
   /**
    * Find or create a ticket, avoiding duplicates
+   * Returns an object with the ticket and a flag indicating if it was found or created
    */
   async findOrCreateTicket(
     ticketData: CreateTicket,
     fromPlace: Place,
     toPlace: Place,
-  ): Promise<Ticket> {
+  ): Promise<{ ticket: Ticket; wasFound: boolean }> {
     // First try to find existing ticket
     const existingTicket = await this.findExistingTicket(
       ticketData,
@@ -285,11 +226,12 @@ export class TicketRepository {
     );
 
     if (existingTicket) {
-      return existingTicket;
+      return { ticket: existingTicket, wasFound: true };
     }
 
     // Create new ticket if no duplicate found
-    return this.createTicket(ticketData, fromPlace, toPlace);
+    const newTicket = await this.createTicket(ticketData, fromPlace, toPlace);
+    return { ticket: newTicket, wasFound: false };
   }
 
   /**
