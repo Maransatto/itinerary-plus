@@ -55,7 +55,43 @@ The project uses **Husky** and **lint-staged** to ensure code quality:
 1. Prettier formats all staged files (`.ts`, `.js`, `.json`, `.md`, `.yml`, `.yaml`)
 2. ESLint fixes issues in TypeScript files
 3. All changes are automatically staged
-4. Commit proceeds if all checks pass
+4. Commit message is validated against conventional commit standards
+5. Commit proceeds if all checks pass
+
+#### Conventional Commits
+
+The project enforces **Conventional Commits** standard for consistent commit messages:
+
+- **Interactive Commit Creation**: Use `yarn commit` for guided commit message creation
+- **Automatic Validation**: All commit messages are validated against conventional standards
+- **Semantic Versioning**: Commit types help with automatic versioning and changelog generation
+
+**Available Commit Types:**
+
+- `feat`: New features
+- `fix`: Bug fixes
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks, dependencies, etc.
+- `ci`: CI/CD changes
+- `build`: Build system changes
+- `revert`: Revert previous commits
+
+**Example Commit Workflow:**
+
+```bash
+# Stage your changes
+git add .
+
+# Use interactive commit tool
+yarn commit
+
+# Or commit directly (will be validated)
+git commit -m "feat: add new ticket sorting algorithm"
+```
 
 #### Testing
 
@@ -91,6 +127,8 @@ The project enforces consistent code style through:
 - `.prettierignore`: Files to exclude from formatting
 - `eslint.config.mjs`: ESLint configuration
 - `.husky/pre-commit`: Git pre-commit hook
+- `.husky/commit-msg`: Git commit-msg hook for conventional commits
+- `commitlint.config.js`: Commit message validation rules
 
 ## Mock the API (no backend needed)
 

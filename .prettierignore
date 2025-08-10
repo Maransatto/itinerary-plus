@@ -35,4 +35,7 @@ yarn-error.log*
 docker-compose.override.yml
 
 # Generated files
-openapi.yaml 
+openapi.yaml
+
+# Configuration files
+commitlint.config.js 
