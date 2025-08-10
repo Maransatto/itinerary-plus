@@ -8,8 +8,12 @@ export class TramTicket extends Ticket {
   @Column({ type: 'varchar', length: 20 })
   line: string;
 
-  constructor(data: Partial<TramTicket>) {
-    super(data);
-    Object.assign(this, data);
+  constructor(data?: Partial<TramTicket>) {
+    super(data || {});
+    this.type = TicketType.TRAM;
+
+    if (data?.line !== undefined) {
+      this.line = data.line;
+    }
   }
 }

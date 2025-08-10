@@ -27,8 +27,14 @@ export class FlightTicket extends Ticket {
   })
   baggage?: BaggageType;
 
-  constructor(data: Partial<FlightTicket>) {
-    super(data);
+  constructor(data?: Partial<FlightTicket>) {
+    super(data || {});
     this.type = TicketType.FLIGHT;
+
+    // Only assign if data is provided
+    if (data?.airline !== undefined) this.airline = data.airline;
+    if (data?.flightNumber !== undefined) this.flightNumber = data.flightNumber;
+    if (data?.gate !== undefined) this.gate = data.gate;
+    if (data?.baggage !== undefined) this.baggage = data.baggage;
   }
 }

@@ -60,7 +60,7 @@ export class TicketRepository {
         break;
       }
 
-      case TicketType.BUS:
+      case TicketType.BUS: {
         ticket = new BusTicket({
           type: ticketData.type,
           seat: ticketData.seat,
@@ -71,6 +71,7 @@ export class TicketRepository {
           operator: ticketData.operator,
         });
         break;
+      }
 
       case TicketType.TRAM: {
         const tramData = ticketData;
@@ -85,7 +86,7 @@ export class TicketRepository {
         break;
       }
 
-      case TicketType.BOAT:
+      case TicketType.BOAT: {
         ticket = new BoatTicket({
           type: ticketData.type,
           seat: ticketData.seat,
@@ -96,8 +97,9 @@ export class TicketRepository {
           dock: ticketData.dock,
         });
         break;
+      }
 
-      case TicketType.TAXI:
+      case TicketType.TAXI: {
         ticket = new TaxiTicket({
           type: ticketData.type,
           seat: ticketData.seat,
@@ -109,6 +111,7 @@ export class TicketRepository {
           vehicleId: ticketData.vehicleId,
         });
         break;
+      }
       default:
         throw new Error(
           `Unsupported ticket type: ${(ticketData as unknown as { type: string }).type}`,

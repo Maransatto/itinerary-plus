@@ -51,7 +51,9 @@ export abstract class Ticket {
   @UpdateDateColumn()
   updatedAt?: Date;
 
-  constructor(data: Partial<Ticket>) {
-    Object.assign(this, data);
+  constructor(data?: Partial<Ticket>) {
+    if (data) {
+      Object.assign(this, data);
+    }
   }
 }

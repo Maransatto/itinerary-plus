@@ -14,8 +14,13 @@ export class TaxiTicket extends Ticket {
   @Column({ type: 'varchar', length: 50, nullable: true })
   vehicleId?: string;
 
-  constructor(data: Partial<TaxiTicket>) {
-    super(data);
-    Object.assign(this, data);
+  constructor(data?: Partial<TaxiTicket>) {
+    super(data || {});
+    this.type = TicketType.TAXI;
+
+    // Only assign if data is provided
+    if (data?.company !== undefined) this.company = data.company;
+    if (data?.driver !== undefined) this.driver = data.driver;
+    if (data?.vehicleId !== undefined) this.vehicleId = data.vehicleId;
   }
 }

@@ -14,8 +14,13 @@ export class TrainTicket extends Ticket {
   @Column({ type: 'varchar', length: 10 })
   platform: string;
 
-  constructor(data: Partial<TrainTicket>) {
-    super(data);
+  constructor(data?: Partial<TrainTicket>) {
+    super(data || {});
     this.type = TicketType.TRAIN;
+
+    // Only assign if data is provided
+    if (data?.line !== undefined) this.line = data.line;
+    if (data?.number !== undefined) this.number = data.number;
+    if (data?.platform !== undefined) this.platform = data.platform;
   }
 }

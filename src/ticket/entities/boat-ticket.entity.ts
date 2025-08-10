@@ -11,8 +11,12 @@ export class BoatTicket extends Ticket {
   @Column({ type: 'varchar', length: 50, nullable: true })
   dock?: string;
 
-  constructor(data: Partial<BoatTicket>) {
-    super(data);
-    Object.assign(this, data);
+  constructor(data?: Partial<BoatTicket>) {
+    super(data || {});
+    this.type = TicketType.BOAT;
+
+    // Only assign if data is provided
+    if (data?.vessel !== undefined) this.vessel = data.vessel;
+    if (data?.dock !== undefined) this.dock = data.dock;
   }
 }

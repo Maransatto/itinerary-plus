@@ -11,8 +11,12 @@ export class BusTicket extends Ticket {
   @Column({ type: 'varchar', length: 100, nullable: true })
   operator?: string;
 
-  constructor(data: Partial<BusTicket>) {
-    super(data);
-    Object.assign(this, data);
+  constructor(data?: Partial<BusTicket>) {
+    super(data || {});
+    this.type = TicketType.BUS;
+
+    // Only assign if data is provided
+    if (data?.route !== undefined) this.route = data.route;
+    if (data?.operator !== undefined) this.operator = data.operator;
   }
 }
