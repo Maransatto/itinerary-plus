@@ -5,7 +5,20 @@ info:
   description: |
     API for sorting travel tickets into a complete itinerary and rendering a human-readable version.
 
-    Contract-first design to enable parallel development and mocking. No authentication in v1.
+    **Contract-first design** to enable parallel development and mocking. No authentication in v1.
+
+    **Error Handling Philosophy:**
+    This API prioritizes **detailed, actionable error messages** over generic responses. When tickets cannot form a valid itinerary, the API provides:
+    - **Specific analysis** of what's wrong with the route structure
+    - **Actionable suggestions** for fixing the issues
+    - **Detailed explanations** of disconnected segments, circular routes, or other problems
+    - **Warnings** for potential issues that don't prevent processing
+
+    **Common Use Cases:**
+    - Sort unsorted travel tickets into a logical sequence
+    - Generate human-readable travel instructions
+    - Validate that tickets form a complete, uninterrupted journey
+    - Identify missing connections in travel plans
 servers:
   - url: http://localhost:3000
     description: Local development
@@ -22,6 +35,25 @@ paths:
       description: |
         Accepts a set of unsorted tickets, sorts them into a single uninterrupted itinerary,
         and returns the created itinerary with an identifier.
+
+        **How it works:**
+        1. Validates all tickets have required fields (type, from, to)
+        2. Builds a directed graph from places and tickets
+        3. Analyzes the graph to find start/end points and detect issues
+        4. Sorts tickets into the correct order using graph traversal
+        5. Generates human-readable instructions (optional)
+        6. Stores the itinerary with a unique ID for later retrieval
+
+        **Success Response (201):**
+        - Returns the complete sorted itinerary with all ticket details
+        - Includes human-readable steps if `render` is set to `human` or `both`
+        - Provides a unique ID for retrieving the itinerary later
+
+        **Common Error Scenarios:**
+        - **400 Bad Request**: Invalid input data (missing fields, malformed JSON)
+        - **422 Unprocessable Entity**: Tickets don't form a valid itinerary (disconnected segments, circular routes, etc.)
+        - **409 Conflict**: Idempotency key conflicts
+        - **500 Internal Server Error**: System-level issues
 
         Set the `render` field to `human` or `both` to request a human-readable output.
       operationId: createItinerary
@@ -394,7 +426,6 @@ components:
         createdAt:
           type: string
           format: date-time
-
     Error:
       type: object
       required: [status, code, message]
@@ -416,75 +447,155 @@ components:
         correlationId:
           type: string
 
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+        errors:
+          type: array
+          items:
+            type: string
+          description: Detailed error messages explaining what went wrong
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Warning messages that don't prevent the operation but provide useful information
+        error:
+          type: string
+          description: Technical error details (for debugging)
+
   responses:
     BadRequest:
-      description: The request was invalid (validation or malformed input)
+      description: |
+        The request was invalid due to validation errors or malformed input.
+        
+        Common causes:
+        - Empty tickets array
+        - Missing required fields (type, from, to)
+        - Invalid ticket type
+        - Malformed JSON structure
+        - Missing or invalid place names
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           examples:
             validationError:
+              summary: Validation error example
               value:
-                status: 400
-                code: BAD_REQUEST
-                message:
-                  - 'tickets should not be empty'
-                correlationId: req_01J8000001
+                message: "Invalid input data"
+                errors: [
+                  "tickets should not be empty",
+                  "Each ticket must have a valid 'from' place",
+                  "Each ticket must have a valid 'to' place"
+                ]
+                warnings: []
+            malformedJson:
+              summary: Malformed JSON example
+              value:
+                message: "Invalid input data"
+                errors: [
+                  "Unexpected token in JSON at position 25"
+                ]
+                warnings: []
     NotFound:
-      description: The requested resource was not found
+      description: |
+        The requested itinerary was not found.
+        
+        This can happen when:
+        - The itinerary ID doesn't exist
+        - The itinerary was deleted
+        - The ID format is invalid
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           examples:
             notFound:
+              summary: Itinerary not found
               value:
-                status: 404
-                code: NOT_FOUND
-                message: Itinerary not found
-                correlationId: req_01J8000002
+                message: "Itinerary not found"
+                error: "No itinerary found with ID: 5b4cc1f8-6e2b-43a2-9c19-2d83f7b16f5b"
     Conflict:
-      description: The request conflicts with the current state (e.g., idempotency key reuse with different payload)
+      description: |
+        The request conflicts with the current state.
+        
+        This typically occurs when:
+        - An idempotency key is reused with a different payload
+        - The same itinerary is being created simultaneously
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           examples:
-            conflict:
+            idempotencyConflict:
+              summary: Idempotency key conflict
               value:
-                status: 409
-                code: CONFLICT
-                message: Idempotency key already used with a different payload
-                correlationId: req_01J8000003
+                message: "Idempotency key already used with a different payload"
+                error: "Key 'demo-123' was used for a different request"
     UnprocessableEntity:
-      description: Business rule violation (e.g., tickets do not form a single uninterrupted path)
+      description: |
+        Business rule violation - the tickets cannot form a valid itinerary.
+        
+        Common scenarios:
+        - **Disconnected segments**: Tickets form multiple separate route segments
+        - **Circular routes**: Tickets create loops in the itinerary
+        - **Multiple branches**: A place has multiple possible next destinations
+        - **Missing connections**: Gaps between consecutive tickets
+        - **Invalid endpoints**: No clear start or end point
+        
+        The response includes detailed analysis of the route structure and suggestions for fixing the issues.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           examples:
-            disconnected:
+            disconnectedSegments:
+              summary: Disconnected route segments
               value:
-                status: 422
-                code: DISCONNECTED_ITINERARY
-                message: Tickets do not form a single uninterrupted path.
-                details:
-                  breakAt: Innsbruck Airport
-                correlationId: req_01J8000004
+                message: "Tickets do not form a valid itinerary"
+                errors: [
+                  "Route has 2 disconnected segments. Segment 1: Gara Venetia Santa Lucia → Chicago O'Hare (4 tickets, 5 places); Segment 2: St. Anton am Arlberg Bahnhof → Venice Airport (3 tickets, 4 places). Potential connections needed: Missing: Chicago O'Hare → St. Anton am Arlberg Bahnhof; Missing: Venice Airport → Gara Venetia Santa Lucia"
+                ]
+                warnings: []
+            circularRoute:
+              summary: Circular route detected
+              value:
+                message: "Tickets do not form a valid itinerary"
+                errors: [
+                  "Circular route detected: Venice Airport → Gara Venetia Santa Lucia → Bologna San Ruffillo → Venice Airport"
+                ]
+                warnings: []
+            multipleBranches:
+              summary: Multiple possible routes
+              value:
+                message: "Tickets do not form a valid itinerary"
+                errors: [
+                  "Multiple possible routes found from Innsbruck Hbf: can go to Innsbruck Airport OR Munich Hbf"
+                ]
+                warnings: [
+                  "Consider removing duplicate or conflicting tickets"
+                ]
     InternalServerError:
-      description: Unexpected server error
+      description: |
+        Unexpected server error occurred while processing the request.
+        
+        This indicates a system-level issue that should be reported to the development team.
+        The error details are logged for debugging purposes.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           examples:
             serverError:
+              summary: Internal server error
               value:
-                status: 500
-                code: INTERNAL_SERVER_ERROR
-                message: Something went wrong
-                correlationId: req_01J8000005
+                message: "An unexpected error occurred while processing the itinerary"
+                error: "Database connection timeout"
 
   examples:
     CreatedItineraryExample:
@@ -529,3 +640,22 @@ components:
         2. Board the Tram S5 from Innsbruck Hbf to Innsbruck Airport.
         3. From Innsbruck Airport, board the flight AA904 to Venice Airport from gate 10, seat 18B. Self-check-in luggage at counter.
         4. Last destination reached.
+    DisconnectedSegmentsExample:
+      summary: Example of disconnected segments error
+      value:
+        tickets: [
+          {
+            "type": "train",
+            "from": { "name": "St. Anton am Arlberg Bahnhof" },
+            "to": { "name": "Innsbruck Hbf" },
+            "number": "RJX 765"
+          },
+          {
+            "type": "flight",
+            "from": { "name": "Paris CDG Airport" },
+            "to": { "name": "Chicago O'Hare" },
+            "flightNumber": "AF136"
+          }
+        ]
+        render: "both"
+

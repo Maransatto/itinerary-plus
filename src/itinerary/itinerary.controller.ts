@@ -33,6 +33,7 @@ import {
   CreateTrainTicketDto,
   CreateTramTicketDto,
 } from '../ticket/dto';
+import { API_DOCUMENTATION } from './dto/api-documentation';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
 import { Itinerary } from './entities/itinerary.entity';
 import { ItineraryService } from './itinerary.service';
@@ -54,9 +55,8 @@ export class ItineraryController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create and sort an itinerary from unsorted tickets',
-    description:
-      'Accepts a set of unsorted tickets, sorts them into a single uninterrupted itinerary, and returns the created itinerary with an identifier.',
+    summary: API_DOCUMENTATION.CREATE_ITINERARY.summary,
+    description: API_DOCUMENTATION.CREATE_ITINERARY.description,
   })
   @ApiHeader({
     name: 'idempotency-key',
@@ -70,20 +70,23 @@ export class ItineraryController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'The request was invalid (validation or malformed input)',
+    description: API_DOCUMENTATION.ERRORS.BAD_REQUEST.description,
+    schema: API_DOCUMENTATION.ERRORS.BAD_REQUEST.schema,
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'The request conflicts with the current state',
+    description: API_DOCUMENTATION.ERRORS.CONFLICT.description,
+    schema: API_DOCUMENTATION.ERRORS.CONFLICT.schema,
   })
   @ApiResponse({
     status: HttpStatus.UNPROCESSABLE_ENTITY,
-    description:
-      'Business rule violation (e.g., tickets do not form a single uninterrupted path)',
+    description: API_DOCUMENTATION.ERRORS.UNPROCESSABLE_ENTITY.description,
+    schema: API_DOCUMENTATION.ERRORS.UNPROCESSABLE_ENTITY.schema,
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Unexpected server error',
+    description: API_DOCUMENTATION.ERRORS.INTERNAL_SERVER_ERROR.description,
+    schema: API_DOCUMENTATION.ERRORS.INTERNAL_SERVER_ERROR.schema,
   })
   async createItinerary(
     @Body() createItineraryDto: CreateItineraryDto,
@@ -131,9 +134,8 @@ export class ItineraryController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Retrieve an itinerary by id',
-    description:
-      'Returns the itinerary in JSON. Set Accept: text/plain to receive the human-readable version.',
+    summary: API_DOCUMENTATION.GET_ITINERARY.summary,
+    description: API_DOCUMENTATION.GET_ITINERARY.description,
   })
   @ApiParam({
     name: 'id',
@@ -147,7 +149,8 @@ export class ItineraryController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'The requested resource was not found',
+    description: API_DOCUMENTATION.ERRORS.NOT_FOUND.description,
+    schema: API_DOCUMENTATION.ERRORS.NOT_FOUND.schema,
   })
   async getItinerary(
     @Param('id') id: string,
@@ -198,9 +201,8 @@ export class ItineraryController {
 
   @Get(':id/human')
   @ApiOperation({
-    summary: 'Retrieve an itinerary in human-readable form',
-    description:
-      'Convenience endpoint for plain text rendering of an itinerary',
+    summary: API_DOCUMENTATION.GET_ITINERARY_HUMAN.summary,
+    description: API_DOCUMENTATION.GET_ITINERARY_HUMAN.description,
   })
   @ApiParam({
     name: 'id',
@@ -215,8 +217,14 @@ export class ItineraryController {
         schema: {
           type: 'string',
         },
+        example: API_DOCUMENTATION.EXAMPLES.HUMAN_READABLE,
       },
     },
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: API_DOCUMENTATION.ERRORS.NOT_FOUND.description,
+    schema: API_DOCUMENTATION.ERRORS.NOT_FOUND.schema,
   })
   @Header('Content-Type', 'text/plain')
   async getItineraryHuman(@Param('id') id: string): Promise<string> {

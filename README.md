@@ -145,15 +145,26 @@ The project enforces consistent code style through:
 - `.husky/commit-msg`: Git commit-msg hook for conventional commits
 - `commitlint.config.js`: Commit message validation rules
 
-## Mock the API (no backend needed)
+## API Documentation
 
-You can mock the endpoints from the OpenAPI contract immediately.
+### Live Swagger UI
 
-### Prerequisites
+When the server is running, visit `http://localhost:3000/api` for comprehensive, interactive API documentation with:
+
+- **Detailed endpoint descriptions** with step-by-step explanations
+- **Request/response examples** for all scenarios
+- **Error response schemas** with specific examples
+- **Interactive testing** directly from the browser
+
+### Mock the API (no backend needed)
+
+You can mock the endpoints from the OpenAPI contract for parallel development.
+
+#### Prerequisites
 
 - Node.js >= 18
 
-### Using Prism (recommended)
+#### Using Prism (recommended)
 
 1. Install Prism CLI (globally or via npx):
 
@@ -194,12 +205,13 @@ You can mock the endpoints from the OpenAPI contract immediately.
        http://127.0.0.1:4010/v1/itineraries
      ```
 
-### Notes
+#### Notes
 
-- Spec version: OpenAPI 3.1.0 (`openapi.yaml`).
-- No authentication in v1.
-- Status codes: 201 (create), 200 (get), 400, 404, 409, 422, 500.
-- Extensible tickets via `type` discriminator: train, tram, bus, boat, flight, taxi.
+- **Live Documentation**: For detailed API docs with examples, use the Swagger UI at `/api`
+- **Mock Contract**: `openapi.yaml` provides a simplified contract for mocking
+- **No authentication** in v1
+- **Status codes**: 201 (create), 200 (get), 400, 404, 409, 422, 500
+- **Extensible tickets** via `type` discriminator: train, tram, bus, boat, flight, taxi
 
 ---
 
