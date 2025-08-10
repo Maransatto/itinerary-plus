@@ -9,6 +9,7 @@ import { TaxiTicket } from './entities/taxi-ticket.entity';
 import { Ticket, TicketType } from './entities/ticket.entity';
 import { TrainTicket } from './entities/train-ticket.entity';
 import { TramTicket } from './entities/tram-ticket.entity';
+import { CreateTicket } from './ticket.service';
 
 @Injectable()
 export class TicketRepository {
@@ -19,9 +20,12 @@ export class TicketRepository {
 
   /**
    * Create a ticket of the appropriate type based on the ticket data
-   * // TODO: we should not use any, replace it with the proper DTO
    */
-  async createTicket(ticketData: any, fromPlace: Place, toPlace: Place): Promise<Ticket> {
+  async createTicket(
+    ticketData: CreateTicket,
+    fromPlace: Place,
+    toPlace: Place,
+  ): Promise<Ticket> {
     let ticket: Ticket;
 
     switch (ticketData.type) {
@@ -30,7 +34,6 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
           airline: ticketData.airline,
@@ -45,12 +48,11 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
+          line: ticketData.line,
           number: ticketData.number,
           platform: ticketData.platform,
-          line: ticketData.line,
         });
         break;
 
@@ -59,7 +61,6 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
           route: ticketData.route,
@@ -72,7 +73,6 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
           line: ticketData.line,
@@ -84,7 +84,6 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
           vessel: ticketData.vessel,
@@ -97,7 +96,6 @@ export class TicketRepository {
           type: ticketData.type,
           seat: ticketData.seat,
           notes: ticketData.notes,
-          meta: ticketData.meta,
           from: fromPlace,
           to: toPlace,
           company: ticketData.company,
@@ -105,9 +103,10 @@ export class TicketRepository {
           vehicleId: ticketData.vehicleId,
         });
         break;
-
       default:
-        throw new Error(`Unsupported ticket type: ${ticketData.type}`);
+        throw new Error(
+          `Unsupported ticket type: ${(ticketData as unknown as { type: string }).type}`,
+        );
     }
 
     return this.ticketRepository.save(ticket);
@@ -183,7 +182,11 @@ export class TicketRepository {
   /**
    * Find existing ticket with matching content to avoid duplicates
    */
-  async findExistingTicket(ticketData: any, fromPlaceId: string, toPlaceId: string): Promise<Ticket | null> {
+  async findExistingTicket(
+    ticketData: CreateTicket,
+    fromPlaceId: string,
+    toPlaceId: string,
+  ): Promise<Ticket | null> {
     const query = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.from', 'fromPlace')
@@ -196,7 +199,9 @@ export class TicketRepository {
     switch (ticketData.type) {
       case TicketType.FLIGHT:
         if (ticketData.flightNumber) {
-          query.andWhere('ticket.flightNumber = :flightNumber', { flightNumber: ticketData.flightNumber });
+          query.andWhere('ticket.flightNumber = :flightNumber', {
+            flightNumber: ticketData.flightNumber,
+          });
         }
         if (ticketData.seat) {
           query.andWhere('ticket.seat = :seat', { seat: ticketData.seat });
@@ -205,10 +210,14 @@ export class TicketRepository {
 
       case TicketType.TRAIN:
         if (ticketData.number) {
-          query.andWhere('ticket.number = :number', { number: ticketData.number });
+          query.andWhere('ticket.number = :number', {
+            number: ticketData.number,
+          });
         }
         if (ticketData.platform) {
-          query.andWhere('ticket.platform = :platform', { platform: ticketData.platform });
+          query.andWhere('ticket.platform = :platform', {
+            platform: ticketData.platform,
+          });
         }
         if (ticketData.seat) {
           query.andWhere('ticket.seat = :seat', { seat: ticketData.seat });
@@ -220,7 +229,9 @@ export class TicketRepository {
           query.andWhere('ticket.route = :route', { route: ticketData.route });
         }
         if (ticketData.operator) {
-          query.andWhere('ticket.operator = :operator', { operator: ticketData.operator });
+          query.andWhere('ticket.operator = :operator', {
+            operator: ticketData.operator,
+          });
         }
         break;
 
@@ -232,16 +243,22 @@ export class TicketRepository {
 
       case TicketType.TAXI:
         if (ticketData.company) {
-          query.andWhere('ticket.company = :company', { company: ticketData.company });
+          query.andWhere('ticket.company = :company', {
+            company: ticketData.company,
+          });
         }
         if (ticketData.vehicleId) {
-          query.andWhere('ticket.vehicleId = :vehicleId', { vehicleId: ticketData.vehicleId });
+          query.andWhere('ticket.vehicleId = :vehicleId', {
+            vehicleId: ticketData.vehicleId,
+          });
         }
         break;
 
       case TicketType.BOAT:
         if (ticketData.vessel) {
-          query.andWhere('ticket.vessel = :vessel', { vessel: ticketData.vessel });
+          query.andWhere('ticket.vessel = :vessel', {
+            vessel: ticketData.vessel,
+          });
         }
         if (ticketData.dock) {
           query.andWhere('ticket.dock = :dock', { dock: ticketData.dock });
@@ -255,10 +272,18 @@ export class TicketRepository {
   /**
    * Find or create a ticket, avoiding duplicates
    */
-  async findOrCreateTicket(ticketData: any, fromPlace: Place, toPlace: Place): Promise<Ticket> {
+  async findOrCreateTicket(
+    ticketData: CreateTicket,
+    fromPlace: Place,
+    toPlace: Place,
+  ): Promise<Ticket> {
     // First try to find existing ticket
-    const existingTicket = await this.findExistingTicket(ticketData, fromPlace.id!, toPlace.id!);
-    
+    const existingTicket = await this.findExistingTicket(
+      ticketData,
+      fromPlace.id!,
+      toPlace.id!,
+    );
+
     if (existingTicket) {
       return existingTicket;
     }
@@ -283,10 +308,10 @@ export class TicketRepository {
       result[ticketType] = 0;
     }
 
-    counts.forEach(item => {
+    counts.forEach((item) => {
       result[item.type as TicketType] = parseInt(item.count);
     });
 
     return result;
   }
-} 
+}

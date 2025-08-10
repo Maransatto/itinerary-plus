@@ -1,39 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Place } from '../place/entities/place.entity';
 import { PlaceService } from '../place/place.service';
+import {
+  CreateBoatTicketDto,
+  CreateBusTicketDto,
+  CreateFlightTicketDto,
+  CreateTaxiTicketDto,
+  CreateTrainTicketDto,
+  CreateTramTicketDto,
+} from './dto';
 import { Ticket, TicketType } from './entities/ticket.entity';
 import { TicketRepository } from './ticket.repository';
 
-// TODO: we should not use other types, replace it with the proper DTO
-export interface TicketCreationData {
-  type: TicketType;
-  from: { name: string; code?: string };
-  to: { name: string; code?: string };
-  seat?: string;
-  notes?: string;
-  meta?: Record<string, any>;
-  // Flight-specific
-  airline?: string;
-  flightNumber?: string;
-  gate?: string;
-  baggage?: string;
-  // Train-specific
-  line?: string;
-  number?: string;
-  platform?: string;
-  // Bus-specific
-  route?: string;
-  operator?: string;
-  // Tram-specific
-  // line is shared with train
-  // Boat-specific
-  vessel?: string;
-  dock?: string;
-  // Taxi-specific
-  company?: string;
-  driver?: string;
-  vehicleId?: string;
-}
+export type CreateTicket =
+  | CreateTrainTicketDto
+  | CreateFlightTicketDto
+  | CreateTramTicketDto
+  | CreateBusTicketDto
+  | CreateBoatTicketDto
+  | CreateTaxiTicketDto;
 
 @Injectable()
 export class TicketService {
@@ -47,44 +32,56 @@ export class TicketService {
   /**
    * Create a single ticket with proper place handling
    */
-  async createTicket(ticketData: TicketCreationData): Promise<Ticket> {
-    this.logger.debug(`Creating ${ticketData.type} ticket from ${ticketData.from.name} to ${ticketData.to.name}`);
+  async createTicket(ticketData: CreateTicket): Promise<Ticket> {
+    this.logger.debug(
+      `Creating ${ticketData.type} ticket from ${ticketData.from.name} to ${ticketData.to.name}`,
+    );
 
     try {
       // Validate ticket data
       this.validateTicketData(ticketData);
 
       // Find or create places
-      const fromPlace = await this.placeService.findOrCreatePlace(ticketData.from);
+      const fromPlace = await this.placeService.findOrCreatePlace(
+        ticketData.from,
+      );
       const toPlace = await this.placeService.findOrCreatePlace(ticketData.to);
 
       // Find or create the ticket (avoiding duplicates)
-      const ticket = await this.ticketRepository.findOrCreateTicket(ticketData, fromPlace, toPlace);
+      const ticket = await this.ticketRepository.findOrCreateTicket(
+        ticketData,
+        fromPlace,
+        toPlace,
+      );
 
       this.logger.log(`Created ${ticket.type} ticket with ID: ${ticket.id}`);
       return ticket;
     } catch (error) {
       this.logger.error(`Failed to create ticket: ${ticketData.type}`, error);
-      throw new Error(`Unable to create ${ticketData.type} ticket: ${error.message}`);
+      throw new Error(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `Unable to create ${ticketData.type} ticket: ${error.message}`,
+      );
     }
   }
 
   /**
    * Create multiple tickets efficiently
    */
-  async createMultipleTickets(ticketsData: TicketCreationData[]): Promise<Ticket[]> {
+  async createMultipleTickets(ticketsData: CreateTicket[]): Promise<Ticket[]> {
     this.logger.debug(`Creating ${ticketsData.length} tickets`);
 
     try {
       // Validate all tickets first
-      ticketsData.forEach(ticketData => this.validateTicketData(ticketData));
+      ticketsData.forEach((ticketData) => this.validateTicketData(ticketData));
 
       // Extract and deduplicate places
       const allPlaces = this.extractAllPlaces(ticketsData);
       const uniquePlaces = this.placeService.getUniquePlaces(allPlaces);
 
       // Create all places first
-      const places = await this.placeService.findOrCreateMultiplePlaces(uniquePlaces);
+      const places =
+        await this.placeService.findOrCreateMultiplePlaces(uniquePlaces);
       const placeMap = this.createPlaceMap(places);
 
       // Create tickets with proper place references
@@ -94,10 +91,16 @@ export class TicketService {
         const toPlace = this.findPlaceInMap(placeMap, ticketData.to);
 
         if (!fromPlace || !toPlace) {
-          throw new Error(`Unable to find places for ticket: ${ticketData.from.name} -> ${ticketData.to.name}`);
+          throw new Error(
+            `Unable to find places for ticket: ${ticketData.from.name} -> ${ticketData.to.name}`,
+          );
         }
 
-        const ticket = await this.ticketRepository.findOrCreateTicket(ticketData, fromPlace, toPlace);
+        const ticket = await this.ticketRepository.findOrCreateTicket(
+          ticketData,
+          fromPlace,
+          toPlace,
+        );
         tickets.push(ticket);
       }
 
@@ -153,8 +156,10 @@ export class TicketService {
 
   /**
    * Validate ticket data based on type
+   * Note: Most validation is handled by class-validator decorators in DTOs,
+   * this method provides additional business logic validation
    */
-  private validateTicketData(ticketData: TicketCreationData): void {
+  private validateTicketData(ticketData: CreateTicket): void {
     // Basic validation
     if (!ticketData.type) {
       throw new Error('Ticket type is required');
@@ -172,12 +177,14 @@ export class TicketService {
       throw new Error('To place name is required');
     }
 
-    if (ticketData.from.name === ticketData.to.name && 
-        ticketData.from.code === ticketData.to.code) {
+    if (
+      ticketData.from.name === ticketData.to.name &&
+      ticketData.from.code === ticketData.to.code
+    ) {
       throw new Error('From and to places cannot be the same');
     }
 
-    // Type-specific validation
+    // Type-specific validation for required fields not enforced by DTOs
     switch (ticketData.type) {
       case TicketType.FLIGHT:
         if (!ticketData.flightNumber) {
@@ -204,12 +211,14 @@ export class TicketService {
   /**
    * Extract all places from ticket data
    */
-  private extractAllPlaces(ticketsData: TicketCreationData[]): Array<{ name: string; code?: string }> {
+  private extractAllPlaces(
+    ticketsData: CreateTicket[],
+  ): Array<{ name: string; code?: string }> {
     const places: Array<{ name: string; code?: string }> = [];
-    
-    ticketsData.forEach(ticket => {
-      places.push(ticket.from);
-      places.push(ticket.to);
+
+    ticketsData.forEach((ticket) => {
+      places.push({ name: ticket.from.name, code: ticket.from.code });
+      places.push({ name: ticket.to.name, code: ticket.to.code });
     });
 
     return places;
@@ -220,8 +229,8 @@ export class TicketService {
    */
   private createPlaceMap(places: Place[]): Map<string, Place> {
     const map = new Map<string, Place>();
-    
-    places.forEach(place => {
+
+    places.forEach((place) => {
       // Since place names are unique, we can use just the name as the key
       map.set(place.name, place);
     });
@@ -233,10 +242,10 @@ export class TicketService {
    * Find a place in the map using name (code is ignored since names are unique)
    */
   private findPlaceInMap(
-    placeMap: Map<string, Place>, 
-    placeData: { name: string; code?: string }
+    placeMap: Map<string, Place>,
+    placeData: { name: string; code?: string },
   ): Place | undefined {
     // Look up by name only since names are unique
     return placeMap.get(placeData.name);
   }
-} 
+}
