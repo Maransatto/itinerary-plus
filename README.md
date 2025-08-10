@@ -2,6 +2,96 @@
 
 Contract-first API to sort travel tickets into a complete itinerary and render a human-readable version.
 
+## Development Setup
+
+### Prerequisites
+
+- Node.js >= 18
+- Yarn package manager
+- Docker (for PostgreSQL database)
+
+### Installation
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone <repository-url>
+   cd itinerary-plus
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   yarn install
+   ```
+
+3. **Set up pre-commit hooks** (automatically configured):
+   ```bash
+   # Husky and lint-staged are already configured
+   # Pre-commit hooks will run automatically on git commit
+   ```
+
+### Development Scripts
+
+The project includes comprehensive development tools and scripts:
+
+#### Code Quality & Formatting
+
+- **`yarn format`**: Format all TypeScript files with Prettier
+- **`yarn format:check`**: Check if files are properly formatted
+- **`yarn lint`**: Run ESLint to check code quality
+- **`yarn lint:fix`**: Automatically fix ESLint issues
+
+#### Pre-commit Hooks
+
+The project uses **Husky** and **lint-staged** to ensure code quality:
+
+- **Automatic formatting**: All staged files are formatted with Prettier
+- **Linting**: TypeScript files are linted and auto-fixed with ESLint
+- **Git integration**: Changes are automatically staged after formatting
+
+**What happens on commit:**
+
+1. Prettier formats all staged files (`.ts`, `.js`, `.json`, `.md`, `.yml`, `.yaml`)
+2. ESLint fixes issues in TypeScript files
+3. All changes are automatically staged
+4. Commit proceeds if all checks pass
+
+#### Testing
+
+- **`yarn test`**: Run unit tests
+- **`yarn test:watch`**: Run tests in watch mode
+- **`yarn test:cov`**: Run tests with coverage report
+- **`yarn test:e2e`**: Run end-to-end tests
+
+#### Database Management
+
+- **`yarn migration:run`**: Apply pending migrations
+- **`yarn migration:revert`**: Revert last migration
+- **`yarn migration:generate`**: Generate new migration from entity changes
+- **`yarn schema:sync`**: Sync database schema (development only)
+
+#### Application
+
+- **`yarn start:dev`**: Start development server with hot reload
+- **`yarn start:debug`**: Start with debugging enabled
+- **`yarn build`**: Build for production
+
+### Code Style & Standards
+
+The project enforces consistent code style through:
+
+- **Prettier**: Automatic code formatting with consistent rules
+- **ESLint**: Code quality and best practices enforcement
+- **TypeScript**: Strict type checking and modern JavaScript features
+
+**Configuration files:**
+
+- `.prettierrc`: Prettier formatting rules
+- `.prettierignore`: Files to exclude from formatting
+- `eslint.config.mjs`: ESLint configuration
+- `.husky/pre-commit`: Git pre-commit hook
+
 ## Mock the API (no backend needed)
 
 You can mock the endpoints from the OpenAPI contract immediately.
