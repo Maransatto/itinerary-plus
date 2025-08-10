@@ -100,6 +100,21 @@ git commit -m "feat: add new ticket sorting algorithm"
 - **`yarn test:cov`**: Run tests with coverage report
 - **`yarn test:e2e`**: Run end-to-end tests
 
+**Testing Strategy:**
+
+The application follows a comprehensive testing strategy with unit tests for services and e2e tests for API endpoints. See [TESTING.md](./TESTING.md) for detailed testing patterns and examples.
+
+**Current Test Coverage:**
+
+- ✅ **PlaceService**: 23 tests covering all public methods (96.61% coverage)
+- 🔄 **Other Services**: Tests to be added following established patterns
+- 🔄 **E2E Tests**: API endpoint testing
+
+**Coverage Requirements:**
+
+- 80% minimum coverage for all tested services
+- See [TESTING.md](./TESTING.md) for detailed coverage configuration
+
 #### Database Management
 
 - **`yarn migration:run`**: Apply pending migrations
